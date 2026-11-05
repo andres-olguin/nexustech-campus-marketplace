@@ -1,44 +1,50 @@
-Trabajo de semestre "desarrollo web y movil"
-# NexusTech Store - Campus Hub UNAB (2026)
+# NexusTech Campus Marketplace — Proyecto académico web
 
-## Contexto del Proyecto
+**Prototipo de marketplace para la comunidad estudiantil**, concebido como trabajo de Desarrollo Web y Móvil. Explora catálogo de productos tecnológicos, filtros y una interfaz de carrito simulado. No hay evidencia de un marketplace comercial en operación ni de un convenio con la Universidad Andrés Bello.
 
-### Descripción de la problemática
-Un Marketplace de hardware y soluciones informatica para los estudiantes de la comunidad universitaria ya que no cuentan con un espacio centralizado para comprar, vender o intercambiar productos usados (libros, 
-tecnología, apuntes). Actualmente usan grupos dispersos en redes sociales, lo que dificulta la búsqueda y el orden.
+> **Estado:** laboratorio web con versiones HTML/JavaScript y React/Vite coexistentes. Algunas páginas heredadas todavía están vacías: no deben presentarse como funciones terminadas.
 
-##Funciones Principales
-*   Visualización de catálogo de productos dinámico.
-*   Filtros por categorías y presupuesto máximo.
-*   Vista de detalle de los producto.
-*   Gestión de carrito de compras simulado (local).
-*   Mejora de calidad de datos por integrar API pública.
+## Qué existe en este repositorio
 
-##Tecnologías ocupadas
-*   **React + Vite**  arquitectura de componentes y estado.
-*   **JavaScript (ES6+)** para la lógica.
-*   **CSS3 / Bootstrap** para el diseño responsive y utilidades visuales.
-*   **Fetch API** para el consumo de datos externos.
+| Recurso | Estado |
+|---|---|
+| [`index.html`](index.html) | Interfaz histórica HTML |
+| [`nexustech-react/`](nexustech-react/) | Proyecto React con Vite y Bootstrap |
+| [`App.jsx`](App.jsx), [`useLogica.js`](useLogica.js) | Experimentos React en raíz |
+| [`data.js`](data.js), [`js/`](js/) | Catálogo y lógica de demostración |
+| [`carrito.html`](carrito.html) | Archivo **vacío** en la revisión realizada |
+| [`historial.html`](historial.html) | Archivo **vacío** en la revisión realizada |
+| [`docs/`](docs/) | Estudio técnico y evolución del prototipo |
 
-## Estructura
-src/  
-  ├── assets/         
-  
-  ├── components/    
-  
-  ├── data/           
-  
-  ├── pages/          
-  
-  ├── services/       
-  
-  ├── App.jsx         
-  
-  └── main.jsx        
+**Importante:** no se ha definido todavía cuál de los frontends es canónico. No mezclar los ejemplos de raíz con la app Vite sin revisar sus dependencias.
 
+## Arranque del proyecto React
 
-## Comandos de Git para Subir Cambios
+El [package.json](nexustech-react/package.json) declara React 19, Vite 7 y Bootstrap 5. Requiere Node.js `^20.19.0` o `>=22.12.0`.
 
-git add index.html css/styles.css js/main.js README.md
-git commit -m "docs: simplify comments, add README cheat sheet and sync project"
-git push origin main
+```bash
+cd nexustech-react
+npm install
+npm run dev
+```
+
+El servidor de Vite muestra una URL local al iniciar. También puedes revisar el HTML histórico con un servidor estático, pero **eso no inicia automáticamente la variante React**.
+
+## Alcance y limitaciones
+
+- El carrito y las fichas del catálogo se consideran **demostraciones**, no compras ejecutadas.
+- No se han verificado pagos, autenticación, envíos ni persistencia de operaciones reales.
+- No introducir datos personales de estudiantes en demos sin autorización.
+- El nombre UNAB corresponde al contexto académico y **no implica asociación institucional formal**.
+
+## Evolución priorizada
+
+1. Elegir un único frontend y documentar migración de componentes.
+2. Reparar páginas vacías y enlaces, o eliminarlas del menú público.
+3. Probar filtros, búsqueda, carrito simulado y estados de error con datos sintéticos.
+4. Revisar accesibilidad, rendimiento móvil, moderación y derechos de contenido.
+5. Validar con usuarios antes de añadir cuentas, pagos, logística y backend.
+
+[Plan de ingeniería](docs/ENGINEERING_ROADMAP_2026-11-04.md) · [Estrategia de escalabilidad](docs/ARCHITECTURE_SCALABILITY_2026-11-04.md).
+
+**Autoría:** conservar créditos y licencias de los colaboradores del trabajo académico; no asumir explotación comercial automática.
