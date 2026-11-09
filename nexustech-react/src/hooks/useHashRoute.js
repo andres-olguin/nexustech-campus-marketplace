@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-const pages = ['catalogo', 'favoritos', 'rastreo', 'contacto', 'acceso'];
+const pages = ['catalogo', 'favoritos', 'rastreo', 'historial', 'contacto', 'acceso'];
 function readRoute() {
   const page = location.hash.replace(/^#\/?/, '').split('?')[0];
   return pages.includes(page) ? page : 'catalogo';

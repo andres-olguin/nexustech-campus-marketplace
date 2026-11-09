@@ -1,0 +1,29 @@
+{
+  "name": "nexustech-campus-marketplace",
+  "version": "3.0.0",
+  "private": true,
+  "description": "NexusTech Campus Marketplace UNAB — Proyecto Fullstack Hito 3",
+  "scripts": {
+    "start:backend": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend run dev",
+    "test:backend": "npm --prefix backend test",
+    "test": "npm --prefix backend test",
+    "dev:frontend": "npm --prefix nexustech-react run dev",
+    "build:frontend": "npm --prefix nexustech-react run build",
+    "build": "npm --prefix nexustech-react run build",
+    "docker:up": "docker-compose up --build -d",
+    "docker:down": "docker-compose down"
+  },
+  "keywords": [
+    "marketplace",
+    "unab",
+    "react",
+    "express",
+    "postgresql",
+    "mongodb",
+    "swagger",
+    "docker"
+  ],
+  "author": "Equipo NexusTech (Andrés Olguín, Benjamín Aguilera, Enrique Chamyr, Miguel Vargas)",
+  "license": "ISC"
+}

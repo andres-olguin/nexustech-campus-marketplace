@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Base de Datos Relacional: PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexustech_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexustech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexustech2026}
+      POSTGRES_DB: ${POSTGRES_DB:-nexustech_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexustech -d nexustech_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de Datos No Relacional: MongoDB 7.0
+  mongo:
+    image: mongo:7.0
+    container_name: nexustech_mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: nexustech_events
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend REST API (Node.js Express + Swagger UI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexustech_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://nexustech:nexustech2026@postgres:5432/nexustech_db
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB_NAME: nexustech_events
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+
+  # Frontend Web (React 19 + Vite + Nginx)
+  frontend:
+    build:
+      context: ./nexustech-react
+      dockerfile: Dockerfile
+    container_name: nexustech_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000/api/v1
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
+  mongo_data:
