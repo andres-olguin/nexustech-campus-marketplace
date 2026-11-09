@@ -48,3 +48,7 @@ export class CheckoutDto {
 export class StatusDto {
   @ApiProperty({ enum: ['cancelled'] }) @IsIn(['cancelled']) status!: 'cancelled';
 }
+export class FulfillmentStatusDto {
+  @ApiProperty({ enum: ['preparing', 'shipped', 'delivered'], description: 'Solo la transición siguiente, declarada por el vendedor de esos productos' })
+  @IsIn(['preparing', 'shipped', 'delivered']) status!: 'preparing' | 'shipped' | 'delivered';
+}

@@ -25,9 +25,11 @@ export function addResponseSchemas(document: OpenAPIObject) {
     Cart: object({ items: array(ref('CartItemWithProduct')), total: integer }),
     Favorite: record({ userId: uuid, productId: uuid }),
     FavoriteWithProduct: record({ userId: uuid, productId: uuid, product: ref('Product') }),
-    OrderItem: record({ orderId: uuid, productId: uuid, name: text, unitPrice: integer, quantity: integer }),
+    OrderItem: record({ orderId: uuid, productId: uuid, sellerId: uuid, name: text, unitPrice: integer, quantity: integer }),
+    OrderFulfillment: record({ orderId: uuid, sellerId: uuid, status: { type: 'string', enum: ['confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'] }, updatedAt: date }),
+    SellerOrder: object({ id: uuid, createdAt: date, orderStatus: { type: 'string', enum: ['confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'] }, shippingAddress: text, subtotal: integer, items: array(ref('OrderItem')), fulfillment: ref('OrderFulfillment') }),
     SimulatedTransaction: record({ orderId: uuid, status: { type: 'string', enum: ['approved', 'reversed'] }, provider: { type: 'string', enum: ['simulation'] }, amount: integer }),
-    Order: record({ userId: uuid, status: { type: 'string', enum: ['confirmed', 'cancelled'] }, total: integer, shippingAddress: text, idempotencyKey: text, items: array(ref('OrderItem')), transactions: array(ref('SimulatedTransaction')) }),
+    Order: record({ userId: uuid, status: { type: 'string', enum: ['confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'] }, total: integer, shippingAddress: text, idempotencyKey: text, items: array(ref('OrderItem')), transactions: array(ref('SimulatedTransaction')), fulfillments: array(ref('OrderFulfillment')) }),
     Deleted: object({ deleted: { type: 'boolean', enum: [true] } }),
     Health: object({ status: { type: 'string', enum: ['ok'] }, database: { type: 'string', enum: ['up'] } }),
     ApiError: object({ statusCode: integer, message: { oneOf: [text, array(text)] }, error: text }),
@@ -46,6 +48,7 @@ export function addResponseSchemas(document: OpenAPIObject) {
       else if (path.includes('/products') || path.includes('/publications')) schema = (path.endsWith('/products') || path.endsWith('/publications')) && method === 'get' ? page('Product') : ref('Product');
       else if (path.includes('/cart')) schema = ref(method === 'get' ? 'Cart' : 'CartItem');
       else if (path.includes('/favorites')) schema = method === 'get' ? page('FavoriteWithProduct') : ref('Favorite');
+      else if (path.includes('/seller/orders')) schema = method === 'get' ? page('SellerOrder') : ref('SellerOrder');
       else if (path.includes('/orders')) schema = path.endsWith('/orders') && method === 'get' ? page('Order') : ref('Order');
       else schema = ref('Health');
       const status = method === 'post' && !path.endsWith('/auth/login') ? '201' : '200';

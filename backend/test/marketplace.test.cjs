@@ -1,10 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
-const { mkdtemp } = require('node:fs/promises');
+const { mkdtemp, rm } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
-const { join } = require('node:path');
-const { execFile } = require('node:child_process');
+const { join, resolve, sep } = require('node:path');
+const { execFile, spawn } = require('node:child_process');
+const { once } = require('node:events');
 const { promisify } = require('node:util');
 const exec = promisify(execFile);
 const request = require('supertest');
@@ -14,7 +15,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
   const password = randomBytes(24).toString('hex');
   const dir = await mkdtemp(join(tmpdir(), 'nexustech-pg-'));
   const pg = new EmbeddedPostgres({ databaseDir: dir, port: 55439, user: 'postgres', password,
-    persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'],
+    persistent: true, initdbFlags: ['--locale=C', '--encoding=UTF8'],
     // PostgreSQL 18 io workers may retain inherited pipes after taskkill on Windows.
     postgresFlags: ['-c', 'io_method=sync'], onLog: () => {}, onError: () => {} });
   let db, app;
@@ -33,6 +34,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       const cli = require.resolve('typeorm/cli.js');
       await exec(process.execPath, [cli, 'migration:run', '-d', 'dist/database/data-source.js']);
       assert.equal((await db.runMigrations()).length, 0);
+      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, ['-r', 'ts-node/register', cli, 'migration:run', '-d', 'src/database/data-source.ts']);
       assert.equal((await db.runMigrations()).length, 0);
@@ -54,11 +56,14 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       assert.ok(openapi.paths[`${base}/orders`].post);
       assert.ok(openapi.components.schemas.ProductDto.properties.stock);
       assert.ok(openapi.components.schemas.Order.properties.transactions);
+      assert.ok(openapi.components.schemas.Order.properties.fulfillments);
+      assert.ok(openapi.paths[`${base}/seller/orders/{id}/status`].patch);
       assert.equal(openapi.paths[`${base}/orders`].post.responses['201'].content['application/json'].schema.$ref, '#/components/schemas/Order');
     });
     await t.test('Input validation, unknown fields and protected routes', async () => {
       await http.post(`${base}/auth/register`).send({ email: 'bad', password: 'short', name: 'x', admin: true }).expect(400);
       await http.get(`${base}/users/me`).expect(401);
+      await http.get(`${base}/users/me`).set('x-user-id', 'usr-demo').expect(401);
       await http.get(`${base}/products/not-uuid`).expect(400);
       await http.get(`${base}/products?limit=101`).expect(400);
       await http.get(`${base}/products?minPrice=2000&maxPrice=1000`).expect(400);
@@ -129,6 +134,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       const cancelled = (await http.get(`${base}/orders/${order.id}`).set(auth(buyer.accessToken))).body;
       assert.equal(cancelled.status, 'cancelled');
       assert.equal(cancelled.transactions[0].status, 'reversed');
+      assert.ok(cancelled.fulfillments.every(f => f.status === 'cancelled'));
       await http.patch(`${base}/orders/${order.id}/status`).set(auth(buyer.accessToken)).send({ status: 'paid' }).expect(400);
     });
     await t.test('Failed multi-item checkout rolls back inventory, order and cart', async () => {
@@ -160,9 +166,103 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       for (let i = 0; i < 10; i++) responses.push((await http.post(`${base}/auth/login`).send({ email: 'missing@example.test', password: 'incorrect' })).status);
       assert.ok(responses.includes(429));
     });
+    await t.test('Multi-seller tracking authorizes only participants, redacts other sellers and follows strict sequence', async () => {
+      for (const item of (await http.get(`${base}/cart`).set(auth(buyer.accessToken))).body.items) {
+        await http.delete(`${base}/cart/${item.productId}`).set(auth(buyer.accessToken)).expect(200);
+      }
+      const create = async (user, name) => (await http.post(`${base}/products`).set(auth(user.accessToken)).send({ name, description: 'Producto sintético para seguimiento académico', categoryId: category.id, price: 15000, stock: 3 }).expect(201)).body;
+      const first = await create(seller, 'Monitor seguimiento');
+      const second = await create(other, 'Teclado seguimiento');
+      for (const p of [first, second]) await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: p.id, quantity: 1 }).expect(200);
+      const tracked = (await http.post(`${base}/orders`).set(auth(buyer.accessToken)).send({ shippingAddress: 'Retiro sintético campus principal', idempotencyKey: 'multi-seller-tracking' }).expect(201)).body;
+      assert.equal(tracked.fulfillments.length, 2);
+      const mine = (await http.get(`${base}/seller/orders`).set(auth(seller.accessToken)).expect(200)).body.items.find(o => o.id === tracked.id);
+      assert.equal(mine.items.length, 1);
+      assert.equal(mine.items[0].sellerId, seller.user.id);
+      assert.equal(mine.subtotal, 15000);
+      for (const field of ['userId', 'total', 'transactions', 'idempotencyKey', 'fulfillments']) assert.equal(field in mine, false);
+      const move = (user, status) => http.patch(`${base}/seller/orders/${tracked.id}/status`).set(auth(user.accessToken)).send({ status });
+      await move(buyer, 'preparing').expect(404);
+      await http.patch(`${base}/orders/${tracked.id}/status`).set(auth(buyer.accessToken)).send({ status: 'shipped' }).expect(400);
+      await move(seller, 'shipped').expect(409);
+      const events = [];
+      const { EventEmitter2 } = require('@nestjs/event-emitter');
+      const emitter = app.get(EventEmitter2);
+      const listener = event => { events.push(event); throw new Error('Synthetic Mongo listener failure'); };
+      emitter.on('order.fulfillment.updated', listener);
+      try {
+        const concurrent = await Promise.all([move(seller, 'preparing'), move(seller, 'preparing')]);
+        assert.deepEqual(concurrent.map(r => r.status).sort(), [200, 409]);
+        assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'confirmed');
+        // Global status is still confirmed; segment state must nevertheless block cancellation.
+        await http.patch(`${base}/orders/${tracked.id}/status`).set(auth(buyer.accessToken)).send({ status: 'cancelled' }).expect(409);
+        await move(other, 'preparing').expect(200);
+        assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'preparing');
+        await move(seller, 'confirmed').expect(400);
+        await move(seller, 'shipped').expect(200);
+        await move(seller, 'delivered').expect(200);
+        await move(other, 'shipped').expect(200);
+        assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'shipped');
+        await move(other, 'delivered').expect(200);
+        const delivered = (await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body;
+        assert.equal(delivered.status, 'delivered');
+        assert.ok(delivered.fulfillments.every(f => f.status === 'delivered'));
+        assert.equal(delivered.transactions[0].status, 'approved');
+        assert.equal(events.length, 6);
+        assert.ok(events.every(e => e.resourceId === tracked.id && e.userId === e.sellerId && !('shippingAddress' in e)));
+        for (const p of [first, second]) assert.equal((await http.get(`${base}/products/${p.id}`)).body.stock, 2);
+        await move(seller, 'delivered').expect(409);
+      } finally { emitter.off('order.fulfillment.updated', listener); }
+    });
+    await t.test('Cancellation racing seller preparation cannot both succeed', async () => {
+      const p = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Producto carrera despacho', description: 'Producto sintético sin datos personales', categoryId: category.id, price: 20000, stock: 3 }).expect(201)).body;
+      await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: p.id, quantity: 1 }).expect(200);
+      const o = (await http.post(`${base}/orders`).set(auth(buyer.accessToken)).send({ shippingAddress: 'Retiro sintético campus principal', idempotencyKey: 'cancel-vs-preparing' }).expect(201)).body;
+      const results = await Promise.all([
+        http.patch(`${base}/orders/${o.id}/status`).set(auth(buyer.accessToken)).send({ status: 'cancelled' }),
+        http.patch(`${base}/seller/orders/${o.id}/status`).set(auth(seller.accessToken)).send({ status: 'preparing' }),
+      ]);
+      assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+      const current = (await http.get(`${base}/orders/${o.id}`).set(auth(buyer.accessToken))).body;
+      assert.equal((await http.get(`${base}/products/${p.id}`)).body.stock, current.status === 'cancelled' ? 3 : 2);
+      assert.equal(current.transactions[0].status, current.status === 'cancelled' ? 'reversed' : 'approved');
+    });
+    await t.test('Data survives PostgreSQL restart and two fresh API processes', async () => {
+      const trackedId = (await db.query('SELECT id FROM orders WHERE "idempotencyKey" = $1', ['multi-seller-tracking']))[0].id;
+      await app.close(); app = undefined;
+      await db.destroy();
+      await pg.stop();
+      await pg.start();
+      for (let restart = 0; restart < 2; restart++) {
+        const child = spawn(process.execPath, ['dist/main.js'], { windowsHide: true, stdio: 'ignore', env: { ...process.env, PORT: '55440' } });
+        try {
+          const live = request('http://127.0.0.1:55440');
+          let ready = false;
+          for (let attempt = 0; attempt < 100; attempt++) {
+            if (child.exitCode !== null) throw new Error('API process exited before readiness');
+            try { ready = (await live.get(`${base}/health`).timeout(500)).status === 200; } catch {}
+            if (ready) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          assert.ok(ready, 'Fresh API process must become ready');
+          const session = (await live.post(`${base}/auth/login`).send({ email: 'buyer@example.test', password: 'Demo-password-2026!' }).expect(200)).body;
+          const saved = (await live.get(`${base}/orders/${trackedId}`).set(auth(session.accessToken)).expect(200)).body;
+          assert.equal(saved.status, 'delivered');
+          assert.equal(saved.total, 30000);
+          assert.equal(saved.fulfillments.length, 2);
+          for (const item of saved.items) assert.equal((await live.get(`${base}/products/${item.productId}`).expect(200)).body.stock, 2);
+          await live.get('/docs').redirects(1).expect(200);
+        } finally {
+          if (child.exitCode === null) { const ended = once(child, 'exit'); child.kill(); await ended; }
+        }
+      }
+    });
   } finally {
     if (app) await app.close();
     if (db?.isInitialized) await db.destroy();
     await pg.stop();
+    const target = resolve(dir);
+    assert.ok(target.startsWith(resolve(tmpdir()) + sep + 'nexustech-pg-'), 'Only remove the isolated mkdtemp cluster');
+    await rm(target, { recursive: true, force: true });
   }
 });

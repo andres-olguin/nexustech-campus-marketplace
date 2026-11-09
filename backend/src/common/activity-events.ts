@@ -5,9 +5,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 export class ActivityEvents {
   private readonly logger = new Logger(ActivityEvents.name);
   constructor(private readonly events: EventEmitter2) {}
-  publish(name: string, userId: string, resourceId: string) {
+  publish(name: string, userId: string, resourceId: string, details?: { sellerId: string; status: string; orderStatus: string }) {
     try {
-      void this.events.emitAsync(name, { userId, resourceId, occurredAt: new Date().toISOString() })
+      void this.events.emitAsync(name, { userId, resourceId, occurredAt: new Date().toISOString(), ...details })
         .catch(() => this.logger.warn(`Activity listener failed: ${name}`));
     } catch { this.logger.warn(`Activity listener failed: ${name}`); }
   }

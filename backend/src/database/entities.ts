@@ -49,7 +49,7 @@ export class Favorite extends RecordEntity {
   @Column({ type: 'uuid' }) userId!: string;
   @Column({ type: 'uuid' }) productId!: string;
 }
-export type OrderStatus = 'confirmed' | 'cancelled';
+export type OrderStatus = 'confirmed' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
 @Entity('orders')
 @Index(['userId', 'idempotencyKey'], { unique: true })
 export class Order extends RecordEntity {
@@ -63,9 +63,18 @@ export class Order extends RecordEntity {
 export class OrderItem extends RecordEntity {
   @Column({ type: 'uuid' }) orderId!: string;
   @Column({ type: 'uuid' }) productId!: string;
+  @Column({ type: 'uuid' }) sellerId!: string;
   @Column() name!: string;
   @Column({ type: 'integer' }) unitPrice!: number;
   @Column({ type: 'integer' }) quantity!: number;
+}
+@Entity('order_fulfillments')
+@Index(['orderId', 'sellerId'], { unique: true })
+export class OrderFulfillment extends RecordEntity {
+  @Column({ type: 'uuid' }) orderId!: string;
+  @Column({ type: 'uuid' }) sellerId!: string;
+  @Column({ type: 'varchar', default: 'confirmed' }) status!: OrderStatus;
+  @UpdateDateColumn({ type: 'timestamptz' }) updatedAt!: Date;
 }
 @Entity('simulated_transactions')
 export class SimulatedTransaction extends RecordEntity {
@@ -74,4 +83,4 @@ export class SimulatedTransaction extends RecordEntity {
   @Column({ default: 'simulation' }) provider!: string;
   @Column({ type: 'bigint', transformer: { to: (v: number) => v, from: (v: string) => Number(v) } }) amount!: number;
 }
-export const entities = [User, BuyerProfile, SellerProfile, Category, Product, CartItem, Favorite, Order, OrderItem, SimulatedTransaction];
+export const entities = [User, BuyerProfile, SellerProfile, Category, Product, CartItem, Favorite, Order, OrderItem, OrderFulfillment, SimulatedTransaction];

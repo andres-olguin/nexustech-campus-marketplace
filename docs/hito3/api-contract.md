@@ -25,6 +25,8 @@ Autorización: Bearer accessToken obtenido en /auth/login o /auth/register. Nunc
 | GET | /orders | página de pedidos propios | propietario |
 | GET | /orders/:id | pedido propio con detalles | propietario |
 | PATCH | /orders/:id/status | {status:"cancelled"} | comprador propietario |
+| GET | /seller/orders | ?page=1&limit=20 → página de pedidos con solo los artículos propios | vendedor participante |
+| PATCH | /seller/orders/:id/status | {status:"preparing"\|"shipped"\|"delivered"} → SellerOrder | vendedor participante; siguiente estado únicamente |
 | GET | /health | {status:"ok",database:"up"} | público |
 
 POST: 201, excepto /auth/login: 200; GET/PATCH/PUT/DELETE: 200. DELETE devuelve {deleted:true}.
@@ -38,7 +40,7 @@ Ejemplo producto: {"name":"Teclado mecánico","description":"Teclado usado en bu
 Producto: {id,name,description,categoryId,sellerId,price,stock,imageUrl,isActive,createdAt,updatedAt}.
 Publicación: producto con isActive=true; producto y publicación se modelan como una sola oferta vendible.
 Ejemplo pedido: {"shippingAddress":"Retiro campus Viña del Mar","idempotencyKey":"checkout-2026-001"}.
-Pedido: {id,userId,status,total,shippingAddress,idempotencyKey,createdAt,items:[{id,orderId,productId,name,unitPrice,quantity}],transactions:[{id,orderId,status,amount,provider:"simulation"}]}.
+Pedido: {id,userId,status,total,shippingAddress,idempotencyKey,createdAt,items:[{id,orderId,productId,sellerId,name,unitPrice,quantity,createdAt}],transactions:[{id,orderId,status,amount,provider:"simulation",createdAt}],fulfillments:[{id,orderId,sellerId,status,createdAt,updatedAt}]}.
 Carrito: {items:[{id,userId,productId,quantity,product}],total}; favoritos: página de {id,userId,productId,product}.
 Usuario propio: {id,email,name,createdAt,buyerProfile:{id,userId},sellerProfile:{id,userId,displayName}}; no se exponen hashes.
 
@@ -47,6 +49,22 @@ Usuario tiene perfil comprador y vendedor 1:1, carrito lógico y favoritos. Cate
 
 ## Integración MongoDB reservada
 No se crea ni modifica backend/src/activity/. El agente Mongo debe exportar ActivityModule desde src/activity/activity.module.ts y agregarlo a imports de AppModule cuando esté listo. Sus dependencias/configuración pertenecen a ese módulo; usar MONGODB_URI. Para auditoría puede suscribirse a eventos Nest EventEmitter2: product.created, product.updated, order.created, order.cancelled con {userId,resourceId,occurredAt}. Se emiten tras commit; son best effort, sin outbox ni garantía de entrega. Mongo no participa en transacciones ni debe impedir checkout SQL. Nunca registrar contraseñas/tokens/direcciones.
+
+## Seguimiento por vendedor (simulado)
+
+Cada pedido contiene un fulfillment por vendedor. El servidor toma sellerId de los productos al comprar y lo guarda en los detalles; nunca acepta sellerId del cliente. Secuencia estricta: confirmed → preparing → shipped → delivered. Solo el vendedor de ese fulfillment puede avanzarlo mediante `/seller/orders/:id/status`; saltos, repeticiones, retrocesos y pedidos cancelados devuelven 409. Un usuario que no vende artículos de ese pedido recibe 404. Un comprador no puede avanzar el despacho usando su endpoint de cancelación (400 si intenta otro estado).
+
+El estado global es el menor avance entre vendedores: si uno está delivered y otro confirmed, el pedido global sigue confirmed. La cancelación completa requiere que **todos** sigan confirmed; si cualquiera comenzó preparing devuelve 409, aunque el global siga confirmed. Cancelar actualiza todos los fulfillments a cancelled y repone todo el stock en la misma transacción. No hay cancelación parcial ni devoluciones después de preparación. Las transiciones de seguimiento no descuentan ni reponen stock y no cambian la simulación de pago. No hay conexión con transportistas ni prueba real de entrega: son declaraciones de avance del vendedor para la demostración.
+
+SellerOrder: {id,createdAt,orderStatus,shippingAddress,subtotal,items:[OrderItem propios],fulfillment:OrderFulfillment propio}. No contiene total global, detalles de otros vendedores, idempotencyKey, userId del comprador ni transacciones. La dirección se comparte con los vendedores participantes para coordinar entrega.
+
+Ejemplo petición autenticada de vendedor: `PATCH /api/v1/seller/orders/22222222-2222-4222-8222-222222222222/status`, body `{"status":"preparing"}`.
+Ejemplo de fulfillment (UUID ilustrativos, no IDs de seed):
+```json
+{"id":"33333333-3333-4333-8333-333333333333","orderId":"22222222-2222-4222-8222-222222222222","sellerId":"11111111-1111-4111-8111-111111111111","status":"preparing","createdAt":"2026-11-09T22:00:00.000Z","updatedAt":"2026-11-09T22:05:00.000Z"}
+```
+
+Evento adicional `order.fulfillment.updated`: `{userId,resourceId,occurredAt,sellerId,status,orderStatus}`. userId y sellerId identifican al vendedor autenticado; resourceId es el UUID del pedido; status es el nuevo estado del fulfillment y orderStatus el agregado después de la transacción. Sin datos de dirección ni identidad del comprador. El timestamp corresponde a publicación posterior al commit, no a recepción garantizada en Mongo. Los cuatro eventos anteriores conservan su contrato.
 
 ## Seguridad y límites
 JWT HS256 con secreto obligatorio de al menos 32 caracteres, caducidad 1 hora; contraseñas scrypt con sal aleatoria; propiedad validada en servidor. Sin recuperación, verificación email, MFA ni revocación antes de expirar; alcance académico. HTTPS corresponde al despliegue. CORS por origen explícito. Rate limit en memoria por IP, requiere configuración adicional detrás de proxy/múltiples instancias.
