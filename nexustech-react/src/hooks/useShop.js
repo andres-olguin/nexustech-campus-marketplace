@@ -1,158 +1,92 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createProducts } from '../data/createProducts.js';
-import initialOrders from '../data/ordersDemo.json';
-import { categories, finishes } from '../utils/format.js';
-import { placeholder } from '../data/imageAssets.js';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { ApiError, createApiClient } from '../services/nestApi.js';
 
-const KEY = 'nexustech-react-v2';
-const initialProducts = createProducts();
-const initialIds = new Set(initialProducts.map((product) => product.id));
-const cloneOrders = () => initialOrders.map((order) => ({ ...order, items: order.items.map((item) => ({ ...item })) }));
-const freshState = () => ({ version: 2, publicaciones: [], eliminados: [], carrito: [], favoritos: [], usuario: null, pedidos: cloneOrders(), consultas: [] });
-const validProduct = (p) => p && typeof p.id === 'string' && typeof p.nombre === 'string' && p.nombre.trim().length >= 3 && categories.includes(p.categoria) && Number.isInteger(p.precio) && p.precio >= 1000 && typeof p.descripcion === 'string' && typeof p.vendedor === 'string';
-
-function readState() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      if (data.version !== 2 || !Array.isArray(data.publicaciones) || !data.publicaciones.every(validProduct) || !Array.isArray(data.eliminados) || !Array.isArray(data.carrito) || !Array.isArray(data.favoritos) || !Array.isArray(data.pedidos) || !Array.isArray(data.consultas)) throw new Error('Formato inválido');
-      const publicaciones = data.publicaciones.filter((p, i, all) => !initialIds.has(p.id) && all.findIndex((x) => x.id === p.id) === i);
-      const eliminados = [...new Set(data.eliminados.filter((id) => initialIds.has(id)))];
-      const ids = new Set([...initialProducts.filter((p) => !eliminados.includes(p.id)), ...publicaciones].map((p) => p.id));
-      return {
-        ...freshState(),
-        publicaciones,
-        eliminados,
-        carrito: data.carrito.filter((item) => ids.has(item.id) && finishes.includes(item.acabado) && Number.isInteger(item.cantidad) && item.cantidad >= 1 && item.cantidad <= 99),
-        favoritos: [...new Set(data.favoritos.filter((id) => ids.has(id)))],
-        usuario: data.usuario && typeof data.usuario.nombre === 'string' && typeof data.usuario.email === 'string' ? { nombre: data.usuario.nombre, email: data.usuario.email } : null,
-        pedidos: data.pedidos.filter((p) => p && typeof p.codigo === 'string' && Number.isInteger(p.paso) && p.paso >= 0 && p.paso <= 3 && typeof p.ciudad === 'string' && Array.isArray(p.items) && Number.isFinite(p.total) && !Number.isNaN(Date.parse(p.fecha))),
-        consultas: data.consultas.filter((c) => c && typeof c.codigo === 'string' && typeof c.mensaje === 'string'),
-      };
-    }
-  } catch {
-    // Los datos mal formados o el almacenamiento bloqueado no impiden abrir la demo.
-  }
-  return freshState();
+export function useRemote(load, dependencies) {
+  const [state, setState] = useState({ status: 'loading', data: null, error: null });
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({ status: 'loading', data: null, error: null });
+    Promise.resolve().then(() => load(controller.signal)).then(data => {
+      if (!controller.signal.aborted) setState({ status: 'success', data, error: null });
+    }).catch(error => { if (!controller.signal.aborted) setState({ status: 'error', data: null, error }); });
+    return () => controller.abort();
+  }, dependencies);
+  return state;
 }
-
-// Controlador local de la tienda. Los componentes reciben datos y callbacks.
 export default function useShop() {
-  const [state, setState] = useState(readState);
-  const [storage, setStorage] = useState('loading');
+  const [session, setSession] = useState(null);
   const [notice, setNotice] = useState(null);
-  const [removed, setRemoved] = useState(null);
+  const [revision, setRevision] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
+  const pendingCheckout = useRef(null);
+  const pendingOwner = useRef(null);
+  const [attempt, setAttempt] = useState(null);
+  const [api] = useState(() => createApiClient({ onUnauthorized: () => {
+    setSession(null);
+    setNotice({ tone: 'error', message: 'Tu sesión venció. Inicia sesión nuevamente.' });
+  } }));
+  const categories = useRemote(signal => api.categories(signal), [api, revision]);
+  const account = useRemote(async signal => {
+    if (!session) return null;
+    const [profile, cart, first] = await Promise.all([api.profile(signal), api.cart(signal), api.favorites(1, signal)]);
+    const favorites = [...first.items];
+    for (let page = 2; favorites.length < first.total; page++) {
+      const next = await api.favorites(page, signal);
+      if (!next.items.length) break;
+      favorites.push(...next.items);
+    }
+    return { profile, cart, favorites };
+  }, [api, session, revision]);
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); setStorage('saved'); }
-    catch { setStorage('session'); }
-  }, [state]);
-  useEffect(() => {
-    if (!notice || notice.undo) return;
-    const timer = setTimeout(() => setNotice(null), 6500);
+    if (!session) { api.setToken(null); return; }
+    let expiry;
+    try { expiry = JSON.parse(atob(session.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000; }
+    catch { setSession(null); return; }
+    const expire = () => { api.setToken(null); setSession(null); setNotice({ tone: 'error', message: 'Tu sesión venció. Inicia sesión nuevamente. Si había una compra pendiente, verifica tus pedidos antes de iniciar otra.' }); };
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) { expire(); return; }
+    const timer = setTimeout(expire, Math.min(expiry - Date.now(), 2147483647));
     return () => clearTimeout(timer);
-  }, [notice]);
-
-  const products = useMemo(() => [...state.publicaciones, ...initialProducts.filter((p) => !state.eliminados.includes(p.id))], [state.publicaciones, state.eliminados]);
-  const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const cart = state.carrito.map((item) => ({ ...byId.get(item.id), ...item })).filter((item) => item.nombre);
-  const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.cantidad, 0);
-  const favoriteSet = useMemo(() => new Set(state.favoritos), [state.favoritos]);
-
-  function addToCart(id, quantity = 1, finish = finishes[0]) {
-    const product = byId.get(id);
-    if (!product || !Number.isInteger(quantity) || quantity < 1 || !finishes.includes(finish)) return;
-    setState((current) => {
-      const found = current.carrito.some((item) => item.id === id && item.acabado === finish);
-      return { ...current, carrito: found
-        ? current.carrito.map((item) => item.id === id && item.acabado === finish ? { ...item, cantidad: Math.min(99, item.cantidad + quantity) } : item)
-        : [...current.carrito, { id, acabado: finish, cantidad: Math.min(99, quantity) }] };
-    });
-    setNotice({ title: 'Producto agregado', message: product.nombre + ' está en tu carrito.' });
-  }
-  function changeQuantity(id, finish, quantity) {
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) return;
-    setState((current) => ({ ...current, carrito: current.carrito.map((item) => item.id === id && item.acabado === finish ? { ...item, cantidad: quantity } : item) }));
-  }
-  function removeFromCart(id, finish) {
-    setState((current) => ({ ...current, carrito: current.carrito.filter((item) => !(item.id === id && item.acabado === finish)) }));
-  }
-  function toggleFavorite(id) {
-    if (!byId.has(id)) return;
-    setState((current) => ({ ...current, favoritos: current.favoritos.includes(id) ? current.favoritos.filter((x) => x !== id) : [...current.favoritos, id] }));
-  }
-  function publish(values) {
-    const product = {
-      id: crypto.randomUUID(), nombre: values.nombre.trim(), categoria: values.categoria,
-      precio: Number(values.precio), imagen: values.imagen.trim() || placeholder,
-      descripcion: values.descripcion.trim(), vendedor: values.vendedor.trim(),
-      contacto: state.usuario?.email || 'contacto de demostración', reseñas: [],
-    };
-    setState((current) => ({ ...current, publicaciones: [product, ...current.publicaciones] }));
-    setNotice({ title: 'Publicación creada', message: 'Tu producto ya aparece en el catálogo.' });
-    return product;
-  }
-  function deleteProduct(id) {
-    const product = byId.get(id);
-    if (!product) return;
-    setRemoved({ product, favorite: favoriteSet.has(id), cart: state.carrito.filter((item) => item.id === id) });
-    setState((current) => ({
-      ...current,
-      publicaciones: current.publicaciones.filter((p) => p.id !== id),
-      eliminados: initialIds.has(id) ? [...new Set([...current.eliminados, id])] : current.eliminados,
-      favoritos: current.favoritos.filter((x) => x !== id),
-      carrito: current.carrito.filter((item) => item.id !== id),
-    }));
-    setNotice({ title: 'Publicación eliminada', message: 'Se retiró el producto del catálogo, del carrito y de favoritos.', undo: true });
-  }
-  function undoDelete() {
-    if (!removed) return;
-    const { product, favorite, cart: oldCart } = removed;
-    setState((current) => ({
-      ...current,
-      publicaciones: initialIds.has(product.id) || current.publicaciones.some((p) => p.id === product.id) ? current.publicaciones : [product, ...current.publicaciones],
-      eliminados: current.eliminados.filter((id) => id !== product.id),
-      favoritos: favorite ? [...new Set([...current.favoritos, product.id])] : current.favoritos,
-      carrito: [...current.carrito, ...oldCart.filter((item) => !current.carrito.some((c) => c.id === item.id && c.acabado === item.acabado))],
-    }));
-    setRemoved(null);
-    setNotice({ title: 'Publicación recuperada', message: 'El producto volvió a la tienda.' });
-  }
-  function checkout(values) {
-    if (!cart.length) return null;
-    let code;
-    do { code = 'TRK-' + (100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000); }
-    while (state.pedidos.some((p) => p.codigo === code));
-    const order = {
-      codigo: code, fecha: new Date().toISOString(), nombre: values.nombre.trim(), email: values.email.trim(),
-      direccion: values.direccion.trim(), ciudad: values.ciudad.trim(), origen: 'Santiago', paso: 0, total,
-      items: cart.map((item) => ({ id: item.id, nombre: item.nombre, precio: item.precio, cantidad: item.cantidad, acabado: item.acabado })),
-    };
-    setState((current) => ({ ...current, carrito: [], pedidos: [order, ...current.pedidos] }));
-    setNotice({ title: 'Pedido de demostración confirmado', message: 'Código de seguimiento: ' + code + '.' });
-    return order;
-  }
-  function advanceOrder(code) {
-    setState((current) => ({ ...current, pedidos: current.pedidos.map((p) => p.codigo === code ? { ...p, paso: Math.min(3, p.paso + 1) } : p) }));
-  }
-  function login(values) {
-    setState((current) => ({ ...current, usuario: { nombre: values.nombre.trim(), email: values.email.trim() } }));
-    setNotice({ title: 'Sesión de demostración iniciada', message: 'Bienvenido, ' + values.nombre.trim() + '.' });
+  }, [api, session]);
+  const run = useCallback(async (action, message) => {
+    if (lock.current) throw new ApiError('Hay una operación en curso. Espera a que termine.');
+    lock.current = true; setBusy(true);
+    try {
+      const result = await action();
+      setRevision(v => v + 1);
+      if (message) setNotice({ tone: 'success', message });
+      return result;
+    } catch (error) { if (error.status === 409) setRevision(v => v + 1); setNotice({ tone: 'error', message: error.message }); throw error; }
+    finally { lock.current = false; setBusy(false); }
+  }, []);
+  const act = action => { void action().catch(() => {}); };
+  async function authenticate(body, register) {
+    const result = await run(() => register ? api.register(body) : api.login(body));
+    if (pendingOwner.current !== result.user.id) { pendingCheckout.current = null; pendingOwner.current = null; setAttempt(null); }
+    api.setToken(result.accessToken); setSession(result);
   }
   function logout() {
-    setState((current) => ({ ...current, usuario: null }));
-    setNotice({ title: 'Sesión cerrada', message: 'El catálogo y tus productos guardados siguen disponibles.' });
+    api.setToken(null); setSession(null); pendingCheckout.current = null; pendingOwner.current = null; setAttempt(null); setNotice(null);
   }
-  function saveContact(values) {
-    const code = 'CONS-' + crypto.randomUUID().slice(0, 8).toUpperCase();
-    setState((current) => ({ ...current, consultas: [{ codigo: code, nombre: values.nombre.trim(), email: values.email.trim(), mensaje: values.mensaje.trim() }, ...current.consultas] }));
-    return code;
+  async function checkout(shippingAddress) {
+    if (!pendingCheckout.current) {
+      pendingCheckout.current = { shippingAddress, idempotencyKey: crypto.randomUUID() };
+      pendingOwner.current = session.user.id;
+      setAttempt(pendingCheckout.current);
+    }
+    try {
+      const result = await run(() => api.checkout(pendingCheckout.current));
+      pendingCheckout.current = null; setAttempt(null);
+      return result;
+    } catch (error) {
+      if ([400, 403, 404, 409].includes(error.status)) { pendingCheckout.current = null; setAttempt(null); }
+      throw error;
+    }
   }
-  function resetDemo() {
-    setState(freshState()); setRemoved(null);
-    setNotice({ title: 'Demostración restaurada', message: 'Se recuperó el catálogo original y el pedido de ejemplo.' });
-  }
-
-  return { products, cart, total, cartCount, favoriteSet, user: state.usuario, orders: state.pedidos, contacts: state.consultas, storage, notice, dismissNotice: () => setNotice(null), addToCart, changeQuantity, removeFromCart, toggleFavorite, publish, deleteProduct, undoDelete, checkout, advanceOrder, login, logout, saveContact, resetDemo };
+  const data = session && account.status === 'success' && account.data?.profile.id === session.user.id ? account.data : null;
+  return { api, session, user: session?.user, profile: data?.profile, account, categories, busy, revision, notice, setNotice, run, act,
+    dismissNotice: () => setNotice(null), authenticate, logout, checkout, attempt,
+    cart: data?.cart || null, favorites: data?.favorites || [], favoriteSet: new Set(data?.favorites.map(f => f.productId) || []),
+    refresh: () => setRevision(v => v + 1),
+  };
 }

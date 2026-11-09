@@ -1,9 +1,13 @@
-import Button from '../ui/Button.jsx';
-import EmptyState from '../ui/EmptyState.jsx';
+﻿import Button from '../ui/Button.jsx';
+import Alert from '../ui/Alert.jsx';
 import ProductImage from '../ui/ProductImage.jsx';
-import { formatCLP, formatUSD } from '../../utils/format.js';
-
-export default function CartPanel({ shop, onCheckout, onClose, usdRate }) {
-  if (!shop.cart.length) return <EmptyState title="Tu carrito está vacío" description="Agrega un producto del catálogo para comenzar." icon="cart" action={<Button onClick={onClose}>Seguir explorando</Button>} />;
-  return <div className="nt-cart-panel"><ul className="nt-cart-list">{shop.cart.map((item) => <li key={item.id + item.acabado} className="nt-cart-item"><ProductImage src={item.imagen} alt={item.nombre} /><div className="nt-cart-item-copy"><h3>{item.nombre}</h3><span>{item.acabado}</span><strong>{formatCLP(item.precio * item.cantidad)}</strong><div className="nt-quantity"><Button variant="ghost" icon="minus" className="nt-icon-button" aria-label={'Reducir cantidad de ' + item.nombre + ', ' + item.acabado} disabled={item.cantidad <= 1} onClick={() => shop.changeQuantity(item.id, item.acabado, item.cantidad - 1)} /><span aria-label={item.cantidad + ' unidades'}>{item.cantidad}</span><Button variant="ghost" icon="plus" className="nt-icon-button" aria-label={'Aumentar cantidad de ' + item.nombre + ', ' + item.acabado} disabled={item.cantidad >= 99} onClick={() => shop.changeQuantity(item.id, item.acabado, item.cantidad + 1)} /></div></div><Button variant="ghost" icon="trash" className="nt-icon-button nt-delete" aria-label={'Quitar del carrito: ' + item.nombre + ', ' + item.acabado} onClick={() => shop.removeFromCart(item.id, item.acabado)} /></li>)}</ul><div className="nt-cart-summary"><div><span>Total en CLP</span><strong>{formatCLP(shop.total)}</strong></div>{usdRate && <p>Referencia: ≈ {formatUSD(shop.total / usdRate)}</p>}<Button icon="arrow" onClick={onCheckout}>Continuar con pedido simulado</Button><small>Compra de demostración · Sin cobro real</small></div></div>;
+import { formatCLP } from '../../utils/format.js';
+export default function CartPanel({ shop, onCheckout }) {
+  if (!shop.user) return <Alert><a href="#/acceso">Inicia sesión</a> para usar tu carrito.</Alert>;
+  if (shop.account.status === 'loading') return <p role="status">Cargando carrito…</p>;
+  if (shop.account.error) return <Alert tone="error">{shop.account.error.message}<Button onClick={shop.refresh}>Reintentar</Button></Alert>;
+  const items = shop.cart?.items || [];
+  if (!items.length) return <p>Tu carrito está vacío.</p>;
+  const mutate = action => shop.act(() => shop.run(action, 'Carrito actualizado.'));
+  return <div className="nt-cart-panel"><ul className="nt-cart-list">{items.map(i => <li key={i.productId} className="nt-cart-item"><ProductImage src={i.product.imageUrl} alt={i.product.name} /><div className="nt-cart-item-copy"><h3>{i.product.name}</h3><strong>{formatCLP(i.product.price * i.quantity)}</strong><p>Stock: {i.product.stock}{!i.product.isActive && ' · Publicación archivada'}</p><div className="nt-quantity"><Button variant="ghost" aria-label={'Reducir cantidad de ' + i.product.name} disabled={shop.busy || i.quantity <= 1} onClick={() => mutate(() => shop.api.setQuantity(i.productId, i.quantity - 1))}>−</Button><span>{i.quantity}</span><Button variant="ghost" aria-label={'Aumentar cantidad de ' + i.product.name} disabled={shop.busy || i.quantity >= Math.min(100, i.product.stock) || !i.product.isActive} onClick={() => mutate(() => shop.api.setQuantity(i.productId, i.quantity + 1))}>+</Button></div></div><Button variant="ghost" aria-label={'Quitar del carrito: ' + i.product.name} disabled={shop.busy} onClick={() => mutate(() => shop.api.removeCart(i.productId))}>Quitar</Button></li>)}</ul><div className="nt-cart-summary"><strong>Total: {formatCLP(shop.cart.total)}</strong><Button disabled={shop.busy || items.some(i => !i.product.isActive || i.quantity > i.product.stock)} onClick={onCheckout}>Continuar con pedido simulado</Button><small>Sin cobro real. El servidor revalida precios e inventario.</small></div></div>;
 }

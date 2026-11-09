@@ -1,18 +1,21 @@
+﻿import { useState } from 'react';
+import Alert from '../ui/Alert.jsx';
 import Button from '../ui/Button.jsx';
 import Field from '../ui/Field.jsx';
-import useValidatedForm from '../../hooks/useValidatedForm.js';
-import { formatCLP, isEmail } from '../../utils/format.js';
-
-function validate(values) {
-  const errors = {};
-  if (values.nombre.trim().length < 3) errors.nombre = 'Ingresa el nombre de quien recibe.';
-  if (!isEmail(values.email)) errors.email = 'Ingresa un correo válido.';
-  if (values.direccion.trim().length < 5) errors.direccion = 'Ingresa una dirección de al menos 5 caracteres.';
-  if (values.ciudad.trim().length < 3) errors.ciudad = 'Ingresa la ciudad de destino.';
-  return errors;
-}
-export default function CheckoutForm({ total, user, onConfirm, onCancel }) {
-  const form = useValidatedForm({ nombre: user?.nombre || '', email: user?.email || '', direccion: '', ciudad: '' }, validate, onConfirm);
-  const props = (name) => ({ name, value: form.values[name], onChange: form.change, error: form.errors[name] });
-  return <form ref={form.ref} onSubmit={form.submit} noValidate><p className="nt-demo-hint">Usa datos de ejemplo para probar el despacho y el seguimiento.</p><Field label="Nombre del destinatario" {...props('nombre')} autoFocus required maxLength={100} /><Field label="Correo de contacto" {...props('email')} type="email" required maxLength={160} /><Field label="Dirección de despacho" {...props('direccion')} required maxLength={180} placeholder="Av. de ejemplo 123" /><Field label="Ciudad / comuna" {...props('ciudad')} required maxLength={80} placeholder="Viña del Mar" /><div className="nt-checkout-total"><span>Total del pedido</span><strong>{formatCLP(total)}</strong></div><div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Volver al carrito</Button><Button type="submit" icon="check">Confirmar pedido simulado</Button></div></form>;
+import { formatCLP } from '../../utils/format.js';
+export default function CheckoutForm({ shop, onConfirm, onCancel }) {
+  const [error, setError] = useState('');
+  const [address, setAddress] = useState(shop.attempt?.shippingAddress || '');
+  async function submit(event) {
+    event.preventDefault(); setError('');
+    try { await onConfirm(shop.attempt?.shippingAddress || address.trim()); } catch (err) { setError(err.message); }
+  }
+  return <form onSubmit={submit} aria-busy={shop.busy}>
+    <Alert title="Operación SIMULADA">Sin cobro real ni validez financiera. No ingreses datos de tarjeta. Usa datos sintéticos durante la demostración.</Alert>
+    <p>Total consultado en carrito: <strong>{formatCLP(shop.cart?.total || 0)}</strong>. El servidor revalida precio y stock al confirmar.</p>
+    <Field label="Dirección o punto de retiro" as="textarea" value={shop.attempt?.shippingAddress || address} onChange={e => setAddress(e.target.value)} required minLength={10} maxLength={500} disabled={shop.busy || Boolean(shop.attempt)} />
+    {shop.attempt && <Alert title="Intento pendiente de verificar">Se conservarán la misma dirección y clave al reintentar. Consulta tus pedidos antes de iniciar otra compra. No recargues la página hasta resolver este intento.</Alert>}
+    {error && <Alert tone="error">{error}</Alert>}
+    <div className="nt-form-actions"><Button variant="secondary" onClick={onCancel} disabled={shop.busy}>Volver al carrito</Button><Button type="submit" disabled={shop.busy}>{shop.busy ? 'Verificando pedido…' : shop.attempt ? 'Reintentar mismo pedido' : 'Confirmar pedido simulado'}</Button></div>
+  </form>;
 }
