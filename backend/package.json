@@ -1,1 +1,49 @@
-{"name":"nexustech-backend","version":"1.0.0","private":true,"scripts":{"build":"tsc -p tsconfig.json","start":"node dist/main.js","start:dev":"ts-node src/main.ts","migration:run":"typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts","migration:revert":"typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts","test":"npm run build && node --test test/*.test.cjs"},"dependencies":{"@nestjs/common":"^11.2.9","@nestjs/core":"^11.2.9","@nestjs/event-emitter":"^3.1.0","@nestjs/jwt":"^11.0.2","@nestjs/platform-express":"^11.2.9","@nestjs/swagger":"^11.4.8","@nestjs/throttler":"^6.7.1","@nestjs/typeorm":"^11.0.3","class-transformer":"^0.5.1","class-validator":"^0.15.1","dotenv":"^18.0.10","helmet":"^8.3.0","pg":"^8.23.1","reflect-metadata":"^0.2.2","rxjs":"^7.8.2","typeorm":"^0.3.31"},"devDependencies":{"@types/express":"^5.0.6","@types/node":"^26.6.6","@types/supertest":"^7.2.1","embedded-postgres":"^18.6.0-beta.19","supertest":"^7.3.2","ts-node":"^10.9.2","tsx":"^4.23.15","typescript":"^6.0.3"},"overrides":{"glob":"^14.0.2","minimatch":"^11.0.1"}}
+{
+  "name": "nexustech-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "start:dev": "ts-node src/main.ts",
+    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
+    "test": "npm run build && node --test test/*.test.cjs",
+    "migration:run:prod": "typeorm migration:run -d dist/database/data-source.js",
+    "migration:revert:prod": "typeorm migration:revert -d dist/database/data-source.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.2.9",
+    "@nestjs/core": "^11.2.9",
+    "@nestjs/event-emitter": "^3.1.0",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-express": "^11.2.9",
+    "@nestjs/swagger": "^11.4.8",
+    "@nestjs/throttler": "^6.7.1",
+    "@nestjs/typeorm": "^11.0.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^18.0.10",
+    "helmet": "^8.3.0",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^0.3.31"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@types/supertest": "^7.2.1",
+    "embedded-postgres": "^18.6.0-beta.19",
+    "supertest": "^7.3.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "glob": "^14.0.2",
+    "minimatch": "^11.0.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -27,11 +27,12 @@ Autorización: Bearer accessToken obtenido en /auth/login o /auth/register. Nunc
 | PATCH | /orders/:id/status | {status:"cancelled"} | comprador propietario |
 | GET | /health | {status:"ok",database:"up"} | público |
 
-POST: 201; GET/PATCH/PUT/DELETE: 200. DELETE devuelve {deleted:true}.
+POST: 201, excepto /auth/login: 200; GET/PATCH/PUT/DELETE: 200. DELETE devuelve {deleted:true}.
 Errores: {statusCode,message,error}; 400 validación, 401 token ausente/inválido, 403 propiedad, 404 recurso, 409 conflicto (email, categoría, stock, estado), 429 límite, 500 error interno, 503 base no disponible.
 Paginación: {items:[],page:1,limit:20,total:0}; limit máximo 100.
+Categorías devuelve un arreglo sin paginar. El carrito tiene máximo 100 productos distintos. PUT /cart devuelve un elemento {id,userId,productId,quantity,createdAt}; PUT /favorites/:productId devuelve {id,userId,productId,createdAt}. Campos desconocidos se rechazan con 400. PATCH de producto no admite null en campos obligatorios.
 
-Ejemplo registro: {"email":"comprador@example.test","password":"ClaveDemo123!","name":"Comprador Demo"}.
+Ejemplo registro: {"email":"comprador@example.test","password":"ClaveDemo123!","name":"Comprador Demo"}. Contraseña: 12..128 caracteres; email normalizado a minúsculas.
 Respuesta auth: {"accessToken":"<JWT>","user":{"id":"<uuid>","email":"comprador@example.test","name":"Comprador Demo"}}.
 Ejemplo producto: {"name":"Teclado mecánico","description":"Teclado usado en buen estado","categoryId":"<uuid>","price":65000,"stock":3}.
 Producto: {id,name,description,categoryId,sellerId,price,stock,imageUrl,isActive,createdAt,updatedAt}.
@@ -42,7 +43,7 @@ Carrito: {items:[{id,userId,productId,quantity,product}],total}; favoritos: pág
 Usuario propio: {id,email,name,createdAt,buyerProfile:{id,userId},sellerProfile:{id,userId,displayName}}; no se exponen hashes.
 
 ## Reglas y relaciones
-Usuario tiene perfil comprador y vendedor 1:1, carrito lógico y favoritos. Categoría tiene muchos productos; vendedor es dueño del producto. Pedido tiene detalles con nombre/precio históricos y transacción simulada. FK restringen borrado de productos pedidos. Productos se archivan. Cantidad 1..100; stock 0..100000; precio 1000..2500000; nombre 3..160; descripción 10..2000. Registro crea ambos perfiles. Categorías solo se borran sin productos. No se compra publicación propia. Checkout bloquea carrito y productos, verifica inventario, descuenta stock, crea detalles/transacción y vacía carrito en una transacción SQL. IdempotencyKey único por usuario; reintento devuelve pedido existente. Estado inicial confirmed (simulación); solo confirmed→cancelled, repone inventario exactamente una vez. No hay cobros reales.
+Usuario tiene perfil comprador y vendedor 1:1, carrito lógico y favoritos. Categoría tiene muchos productos; vendedor es dueño del producto. Pedido tiene detalles con nombre/precio históricos y transacción simulada. FK restringen borrado de productos pedidos. Productos se archivan. Cantidad 1..100; stock 0..100000; precio 1000..2500000; nombre 3..160; descripción 10..2000. Registro crea ambos perfiles. Categorías solo se borran sin productos. No se compra publicación propia. Checkout bloquea usuario y productos, verifica inventario, descuenta stock, crea detalles/transacción y vacía carrito en una transacción SQL. IdempotencyKey único por usuario (8..100 caracteres alfanuméricos, guion o guion bajo); reintento devuelve pedido existente; con distinta dirección devuelve 409. Estado inicial confirmed (simulación); solo confirmed→cancelled, repone inventario exactamente una vez. Cancelación repetida o reposición que exceda 100000 devuelve 409. No hay cobros reales.
 
 ## Integración MongoDB reservada
 No se crea ni modifica backend/src/activity/. El agente Mongo debe exportar ActivityModule desde src/activity/activity.module.ts y agregarlo a imports de AppModule cuando esté listo. Sus dependencias/configuración pertenecen a ese módulo; usar MONGODB_URI. Para auditoría puede suscribirse a eventos Nest EventEmitter2: product.created, product.updated, order.created, order.cancelled con {userId,resourceId,occurredAt}. Se emiten tras commit; son best effort, sin outbox ni garantía de entrega. Mongo no participa en transacciones ni debe impedir checkout SQL. Nunca registrar contraseñas/tokens/direcciones.

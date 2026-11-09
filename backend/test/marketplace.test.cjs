@@ -4,6 +4,9 @@ const { randomBytes } = require('node:crypto');
 const { mkdtemp } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
+const exec = promisify(execFile);
 const request = require('supertest');
 
 test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, async t => {
@@ -11,7 +14,9 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
   const password = randomBytes(24).toString('hex');
   const dir = await mkdtemp(join(tmpdir(), 'nexustech-pg-'));
   const pg = new EmbeddedPostgres({ databaseDir: dir, port: 55439, user: 'postgres', password,
-    persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'], onLog: () => {}, onError: () => {} });
+    persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'],
+    // PostgreSQL 18 io workers may retain inherited pipes after taskkill on Windows.
+    postgresFlags: ['-c', 'io_method=sync'], onLog: () => {}, onError: () => {} });
   let db, app;
   try {
     await pg.initialise();
@@ -20,14 +25,17 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
     process.env.DATABASE_URL = `postgresql://postgres:${password}@localhost:55439/nexustech_test`;
     process.env.JWT_SECRET = randomBytes(48).toString('hex');
     require('reflect-metadata');
-    const { database } = require('../dist/database/data-source');
+    const { default: database } = require('../dist/database/data-source');
     db = database;
     await db.initialize();
     console.log('Verified database:', (await db.query('SELECT version()'))[0].version);
-    await t.test('Migration up, down and up on real PostgreSQL', async () => {
-      assert.equal((await db.runMigrations()).length, 1);
-      await db.undoLastMigration();
-      assert.equal((await db.runMigrations()).length, 1);
+    await t.test('Production and TypeScript migration CLIs: up, down and up', async () => {
+      const cli = require.resolve('typeorm/cli.js');
+      await exec(process.execPath, [cli, 'migration:run', '-d', 'dist/database/data-source.js']);
+      assert.equal((await db.runMigrations()).length, 0);
+      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
+      await exec(process.execPath, ['-r', 'ts-node/register', cli, 'migration:run', '-d', 'src/database/data-source.ts']);
+      assert.equal((await db.runMigrations()).length, 0);
     });
     const { NestFactory } = require('@nestjs/core');
     const { AppModule } = require('../dist/app.module');
@@ -45,6 +53,8 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       await http.get('/docs-json').expect(200);
       assert.ok(openapi.paths[`${base}/orders`].post);
       assert.ok(openapi.components.schemas.ProductDto.properties.stock);
+      assert.ok(openapi.components.schemas.Order.properties.transactions);
+      assert.equal(openapi.paths[`${base}/orders`].post.responses['201'].content['application/json'].schema.$ref, '#/components/schemas/Order');
     });
     await t.test('Input validation, unknown fields and protected routes', async () => {
       await http.post(`${base}/auth/register`).send({ email: 'bad', password: 'short', name: 'x', admin: true }).expect(400);
@@ -121,11 +131,34 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       assert.equal(cancelled.transactions[0].status, 'reversed');
       await http.patch(`${base}/orders/${order.id}/status`).set(auth(buyer.accessToken)).send({ status: 'paid' }).expect(400);
     });
+    await t.test('Failed multi-item checkout rolls back inventory, order and cart', async () => {
+      // Race loser still has one item. Make its quantity exceed the remaining stock.
+      const rows = await db.query('SELECT "userId" FROM cart_items WHERE "productId" = $1', [product.id]);
+      const loser = rows[0].userId === buyer.user.id ? buyer : other;
+      const extra = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Mouse campus', description: 'Mouse de laboratorio en buen estado', categoryId: category.id, price: 12000, stock: 2 }).expect(201)).body;
+      await http.put(`${base}/cart`).set(auth(loser.accessToken)).send({ productId: extra.id, quantity: 2 }).expect(200);
+      await db.query('UPDATE products SET stock = 0 WHERE id = $1', [product.id]);
+      await http.post(`${base}/orders`).set(auth(loser.accessToken)).send({ shippingAddress: 'Retiro campus principal', idempotencyKey: 'rollback-multiple' }).expect(409);
+      assert.equal((await http.get(`${base}/products/${extra.id}`)).body.stock, 2);
+      assert.equal((await http.get(`${base}/cart`).set(auth(loser.accessToken))).body.items.length, 2);
+      assert.equal((await db.query('SELECT count(*)::int AS n FROM orders WHERE "idempotencyKey" = $1', ['rollback-multiple']))[0].n, 0);
+      await http.delete(`${base}/products/${extra.id}`).set(auth(seller.accessToken)).expect(200);
+    });
     await t.test('Archiving preserves order snapshots and excludes public catalog', async () => {
       await http.delete(`${base}/products/${product.id}`).set(auth(seller.accessToken)).expect(200);
       await http.get(`${base}/products/${product.id}`).expect(404);
       assert.equal((await http.get(`${base}/products`)).body.total, 0);
       assert.equal((await http.get(`${base}/orders/${order.id}`).set(auth(buyer.accessToken))).body.items[0].name, 'Teclado campus');
+    });
+    await t.test('JWT tampering/expiry and login rate limit are enforced', async () => {
+      const { JwtService } = require('@nestjs/jwt');
+      const jwt = app.get(JwtService);
+      const expired = await jwt.signAsync({ sub: buyer.user.id }, { expiresIn: -1 });
+      await http.get(`${base}/users/me`).set(auth(expired)).expect(401);
+      await http.get(`${base}/users/me`).set(auth(buyer.accessToken + 'tampered')).expect(401);
+      const responses = [];
+      for (let i = 0; i < 10; i++) responses.push((await http.post(`${base}/auth/login`).send({ email: 'missing@example.test', password: 'incorrect' })).status);
+      assert.ok(responses.includes(429));
     });
   } finally {
     if (app) await app.close();

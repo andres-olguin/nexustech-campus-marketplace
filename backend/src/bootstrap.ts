@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { ErrorsFilter } from './common/errors';
+import { addResponseSchemas } from './common/openapi';
 
 export function configureApp(app: INestApplication) {
   app.use(helmet());
@@ -11,6 +12,7 @@ export function configureApp(app: INestApplication) {
   app.useGlobalFilters(new ErrorsFilter());
   const config = new DocumentBuilder().setTitle('NexusTech Marketplace').setDescription('API académica. Todas las transacciones son simuladas.').setVersion('1.0.0').addBearerAuth().build();
   const document = SwaggerModule.createDocument(app, config);
+  addResponseSchemas(document);
   SwaggerModule.setup('docs', app, document);
   app.enableShutdownHooks();
   return document;
