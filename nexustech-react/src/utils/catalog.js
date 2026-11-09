@@ -1,3 +1,4 @@
+import { matchesCatalogSection } from '../data/departments.js';
 import { normalize } from './format.js';
 import { formatSpecValue, productAttributes, SPEC_FIELDS } from './productSpecs.js';
 
@@ -19,12 +20,13 @@ function searchable(product) {
   return searchText.get(product);
 }
 
-export function filterCatalog(products, { query, category, maxPrice, sort, favorites }) {
+export function filterCatalog(products, { query, category, maxPrice, sort, favorites, section }) {
   const terms = normalize(query.trim()).split(/\s+/).filter(Boolean);
   const result = products.filter((product) =>
     (!favorites || favorites.has(product.id)) &&
     (category === 'all' || product.categoria === category) &&
     product.precio <= maxPrice &&
+    matchesCatalogSection(product, section) &&
     (!terms.length || terms.every((term) => {
       const { text, compact } = searchable(product);
       return text.includes(term) || compact.includes(term);

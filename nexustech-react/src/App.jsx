@@ -22,22 +22,23 @@ import useExchangeRate from './hooks/useExchangeRate.js';
 export default function App() {
   const shop = useShop();
   const exchange = useExchangeRate();
-  const route = useHashRoute();
+  const { route, section } = useHashRoute();
+  const routeKey = route + ':' + (section?.id ?? '');
   const [window, setWindow] = useState(null);
   const [showUSD, setShowUSD] = useState(false);
   const [catalogVersion, setCatalogVersion] = useState(0);
   const [trackingCode, setTrackingCode] = useState('');
   const main = useRef(null);
-  const previousRoute = useRef(route);
+  const previousRoute = useRef(routeKey);
   useEffect(() => {
-    if (previousRoute.current !== route) {
+    if (previousRoute.current !== routeKey) {
       main.current?.focus({ preventScroll: true });
       globalThis.scrollTo({ top: 0 });
-      previousRoute.current = route;
+      previousRoute.current = routeKey;
     }
     const titles = { catalogo: 'Catálogo', favoritos: 'Favoritos', rastreo: 'Rastreo', contacto: 'Contacto', acceso: 'Acceso' };
-    document.title = titles[route] + ' · NexusTech Campus Hub';
-  }, [route]);
+    document.title = (section?.label || titles[route]) + ' · NexusTech Campus Hub';
+  }, [routeKey, route, section]);
 
   const usdRate = showUSD ? exchange.rate?.value : null;
   const close = () => setWindow(null);
@@ -94,9 +95,15 @@ export default function App() {
     delete: 'Puedes deshacer esta acción desde el mensaje de confirmación.', reset: 'Se restablecerán el catálogo, el carrito, los favoritos, la sesión y los pedidos de esta demostración.',
   };
 
-  return <div className="nt-app"><a className="nt-skip" href="#contenido" onClick={(event) => { event.preventDefault(); main.current?.focus(); main.current?.scrollIntoView({ block: 'start' }); }}>Ir al contenido</a><Navbar route={route} cartCount={shop.cartCount} favoriteCount={shop.favoriteSet.size} user={shop.user} onCart={openCart} onPublish={openPublish} /><main ref={main} className="nt-main" id="contenido" tabIndex={-1}>
+  function resetCatalogView() {
+    setCatalogVersion((current) => current + 1);
+    main.current?.focus({ preventScroll: true });
+    globalThis.scrollTo({ top: 0 });
+  }
+
+  return <div className="nt-app"><a className="nt-skip" href="#contenido" onClick={(event) => { event.preventDefault(); main.current?.focus(); main.current?.scrollIntoView({ block: 'start' }); }}>Ir al contenido</a><Navbar key={routeKey} route={route} section={section} cartCount={shop.cartCount} favoriteCount={shop.favoriteSet.size} user={shop.user} onCart={openCart} onPublish={openPublish} onCatalogReselect={resetCatalogView} /><main ref={main} className="nt-main" id="contenido" tabIndex={-1}>
     {shop.storage === 'session' && <Alert title="Cambios durante esta sesión">El navegador no permite conservar la demostración al recargar.</Alert>}
-    {(route === 'catalogo' || route === 'favoritos') && <CatalogPage key={route + catalogVersion} shop={shop} favoriteOnly={route === 'favoritos'} onDetail={openDetail} onDelete={openDelete} onEditPrice={openPrice} onPublish={openPublish} exchange={exchange} showUSD={showUSD} onCurrency={setShowUSD} />}
+    {(route === 'catalogo' || route === 'favoritos') && <CatalogPage key={routeKey + ':' + catalogVersion} shop={shop} section={section} favoriteOnly={route === 'favoritos'} onDetail={openDetail} onDelete={openDelete} onEditPrice={openPrice} onPublish={openPublish} exchange={exchange} showUSD={showUSD} onCurrency={setShowUSD} />}
     {route === 'rastreo' && <TrackingPage key={trackingCode} orders={shop.orders} onAdvance={shop.advanceOrder} initialCode={trackingCode} />}
     {route === 'contacto' && <ContactPage onSave={shop.saveContact} contacts={shop.contacts} />}
     {route === 'acceso' && <LoginPage user={shop.user} onLogin={shop.login} onLogout={shop.logout} />}

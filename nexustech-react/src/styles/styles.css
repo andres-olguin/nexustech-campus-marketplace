@@ -34,7 +34,7 @@ body { margin:0; background:var(--nt-bg); }
 .nt-skip { position:fixed; left:15px; top:-100px; z-index:80; color:#071321 !important; background:var(--nt-cyan); padding:12px 16px; border-radius:7px; }
 .nt-skip:focus { top:12px; }
 .nt-button { display:inline-flex; justify-content:center; align-items:center; gap:8px; padding:10px 14px; border:1px solid transparent; border-radius:8px; font-size:12px !important; font-weight:600 !important; min-height:44px; line-height:1.4; }
-.nt-button--primary { background:var(--nt-cyan); color:#051522; border-color:var(--nt-cyan); }
+.nt-button--primary, .nt-app a.nt-button--primary { background:var(--nt-cyan); color:#051522; border-color:var(--nt-cyan); }
 .nt-button--primary:hover,.nt-button--primary:active { background:#57e1ff !important; color:#051522 !important; border-color:#57e1ff !important; }
 .nt-button--secondary { background:#ffffff04; color:var(--nt-text); border-color:#3a4b61; }
 .nt-button--secondary:hover { background:#20334a; color:var(--nt-text); border-color:#6c839b; }

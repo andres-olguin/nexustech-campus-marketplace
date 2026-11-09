@@ -30,6 +30,7 @@ Los originales están en base-taller1, sin modificaciones, como referencia. La a
 ## Funcionalidades
 
 - Catálogo, búsqueda sin distinguir tildes, categorías, presupuesto, orden y paginación.
+- Menú de departamentos y subcategorías que se combina con la búsqueda y los filtros técnicos.
 - Filtros técnicos que se adaptan a los resultados, con opciones y conteos para cada sección.
 - Tarjetas reutilizables, detalle, reseñas de ejemplo y selección de cantidad y acabado.
 - Detalle con ficha técnica y flechas para recorrer los productos de la búsqueda.
@@ -69,6 +70,10 @@ El cambio se guarda en este navegador y se mantiene al recargar. El precio de lo
 
 ## Filtrar y recorrer el catálogo
 
+En computadora, elige un departamento en la barra superior. En celular, abre **Categorías**. Por ejemplo, **Computación → Teclados → Mecánicos** filtra el catálogo a ese tipo de artículo. **Ver todos** muestra toda la familia, y la ruta que aparece sobre los resultados permite volver a una categoría más amplia.
+
+El catálogo muestra **No hay productos relacionados a esto** cuando la búsqueda o los filtros no tienen coincidencias. Los departamentos sin publicaciones siguen disponibles en el menú. Si publicas un producto, indica el tipo y las características en **Datos para los filtros** para que aparezca en las secciones correspondientes.
+
 Busca **notebook** y abre **Filtros**. El panel muestra los campos que tienen datos entre los resultados. Por ejemplo, en **RAM** puedes seleccionar una cantidad mínima. Pulsa una etiqueta de filtro para quitar ese criterio.
 
 Abre **Ver detalle** y usa las flechas para pasar al artículo anterior o siguiente sin cerrar la ventana. El recorrido respeta los filtros y el orden, incluso cuando el siguiente artículo está en otra página. En el formulario de publicación puedes añadir datos técnicos opcionales para que el producto aparezca en más filtros.
@@ -91,9 +96,9 @@ Se utilizó Node.js 24 para la preparación. package-lock.json conserva las vers
 | src/hooks/useExchangeRate.js | Solicitud USD, actualización y conservación del último dato válido. |
 | src/hooks/useValidatedForm.js | Valores, validación y foco compartidos entre formularios. |
 | src/services/publicApi.js | Fetch, validación de la respuesta y timeout. |
-| src/data | Configuración original del catálogo, generador y pedido inicial. |
+| src/data | Configuración original del catálogo, generador, pedido inicial y departamentos. |
 | src/assets | Fotografías locales, ilustración de respaldo y recursos propios. |
-| src/styles | Identidad común en styles.css; catálogo, precios y sus reglas responsive en catalog.css. |
+| src/styles | Identidad común en styles.css; catálogo y precios en catalog.css; menú adaptable en departments.css. |
 | docs | Diseño previo, wireframes, migración y verificación. |
 | GUIA_PARTE_4.md | Guion y explicación para estudiar. |
 | INTEGRACION.md | Props, contratos y coordinación con el equipo. |

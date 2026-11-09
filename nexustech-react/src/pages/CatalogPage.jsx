@@ -8,6 +8,7 @@ import ExchangeRatePanel from '../components/catalog/ExchangeRatePanel.jsx';
 import FilterPanel from '../components/catalog/FilterPanel.jsx';
 import Pagination from '../components/catalog/Pagination.jsx';
 import ProductCard from '../components/catalog/ProductCard.jsx';
+import { catalogHref } from '../data/departments.js';
 import { activeFacetLabels, facetCatalog, filterCatalog } from '../utils/catalog.js';
 import { categories, formatNumber } from '../utils/format.js';
 import { MAX_PRICE } from '../utils/pricing.js';
@@ -20,7 +21,22 @@ function scrollToResults() {
   document.getElementById('resultados')?.scrollIntoView({ block: 'start' });
 }
 
-export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDelete, onEditPrice, onPublish, exchange, showUSD, onCurrency }) {
+function SectionHeading({ section }) {
+  return <header className="nt-section-heading">
+    <nav aria-label="Ruta del catálogo">
+      <ol>
+        <li><a href={catalogHref()}>Catálogo</a></li>
+        {section.trail.map(({ id, label }) => <li key={id}>
+          <Icon name="chevron" size={13} />
+          {id === section.id ? <span aria-current="page">{label}</span> : <a href={catalogHref(id)}>{label}</a>}
+        </li>)}
+      </ol>
+    </nav>
+    <h1>{section.label}</h1>
+  </header>;
+}
+
+export default function CatalogPage({ shop, section, favoriteOnly = false, onDetail, onDelete, onEditPrice, onPublish, exchange, showUSD, onCurrency }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
@@ -30,6 +46,7 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
   const favorites = favoriteOnly ? shop.favoriteSet : null;
   const facetLabels = activeFacetLabels(facets);
   const activeCount = Number(Boolean(query.trim())) + Number(category !== 'all') + Number(maxPrice < MAX_PRICE) + Number(sort !== 'default') + facetLabels.length;
+  const emptyFavorites = favoriteOnly && !shop.favoriteSet.size && !activeCount;
 
   function update(setter, value) { setter(value); setPage(1); }
   function clear() { setQuery(''); setCategory('all'); setMaxPrice(MAX_PRICE); setSort('default'); setFacets({}); setPage(1); }
@@ -48,8 +65,8 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
     setPage(1);
   }
   const candidates = useMemo(
-    () => filterCatalog(shop.products, { query, category, maxPrice, sort, favorites }),
-    [shop.products, query, category, maxPrice, sort, favorites]
+    () => filterCatalog(shop.products, { query, category, maxPrice, sort, favorites, section }),
+    [shop.products, query, category, maxPrice, sort, favorites, section]
   );
   const { results: filtered, options } = useMemo(() => facetCatalog(candidates, facets), [candidates, facets]);
   const inspect = useCallback((product) => onDetail(product, filtered), [onDetail, filtered]);
@@ -69,17 +86,17 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
       <span className="nt-eyebrow">TU SELECCIÓN</span><h1>Tus favoritos<span>.</span></h1>
       <p>Vuelve a los equipos y soluciones que guardaste.</p>
       <a className="nt-text-link" href="#/catalogo">Explorar catálogo<Icon name="arrow" size={16} /></a>
-    </header> : <CatalogHero count={shop.products.length} onExplore={explore} onPublish={onPublish} />}
+    </header> : section ? <SectionHeading section={section} /> : <CatalogHero count={shop.products.length} onExplore={explore} onPublish={onPublish} />}
     <section id="resultados" className="nt-catalog-section" aria-labelledby="resultados-titulo">
       <div className="nt-results-heading">
-        <h2 id="resultados-titulo" tabIndex={-1}>{favoriteOnly ? 'Productos guardados' : 'Explora el catálogo'}</h2>
+        <h2 id="resultados-titulo" tabIndex={-1}>{favoriteOnly ? 'Productos guardados' : section ? 'Productos relacionados' : 'Explora el catálogo'}</h2>
         <p aria-live="polite">{formatNumber(filtered.length)} {filtered.length === 1 ? 'resultado' : 'resultados'}
           {visible.length > 0 && <span> · {first + 1}–{first + visible.length}</span>}
         </p>
       </div>
       <div className="nt-browse-tools">
         <Field id="nexus-search" label="Buscar productos" hideLabel icon="search" type="search"
-          placeholder="Buscar productos…" value={query} onChange={(event) => update(setQuery, event.target.value)} className="nt-catalog-search" />
+          placeholder="Buscar productos…" maxLength={160} value={query} onChange={(event) => update(setQuery, event.target.value)} className="nt-catalog-search" />
         <Field label="Ordenar productos" hideLabel as="select" value={sort} onChange={(event) => update(setSort, event.target.value)}>
           <option value="default">Orden inicial</option><option value="low">Menor precio</option>
           <option value="high">Mayor precio</option><option value="name">Nombre: A–Z</option>
@@ -104,11 +121,18 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
               favorite={shop.favoriteSet.has(product.id)} onFavorite={shop.toggleFavorite} onDetail={inspect} onAdd={shop.addToCart}
               onDelete={onDelete} onEditPrice={shop.editableIds.has(product.id) ? onEditPrice : undefined} usdRate={usdRate} />)}</div>
             <Pagination page={safePage} totalPages={pages} onChange={(next) => { setPage(next); scrollToResults(); }} />
-          </> : <EmptyState title={favoriteOnly && !shop.favoriteSet.size ? 'Todavía no guardaste favoritos' : 'No encontramos productos'}
-            description={favoriteOnly && !shop.favoriteSet.size ? 'Pulsa el corazón de una publicación para encontrarla aquí.' : 'Prueba otro texto o amplía los filtros.'} icon={favoriteOnly ? 'heart' : 'search'}
-            action={favoriteOnly && !shop.favoriteSet.size
-              ? <a className="btn nt-button nt-button--primary" href="#/catalogo">Ver catálogo</a>
-              : <Button variant="secondary" onClick={clear}>Limpiar filtros</Button>} />}
+          </> : <EmptyState title={emptyFavorites ? 'Todavía no guardaste favoritos' : 'No hay productos relacionados a esto'}
+            description={emptyFavorites ? 'Pulsa el corazón de una publicación para encontrarla aquí.'
+              : query.trim() ? <>No encontramos coincidencias para <strong>«{query.trim()}»</strong>. Prueba otro texto o amplía los filtros.</>
+                : activeCount ? 'Prueba ampliar o quitar los filtros.'
+                  : section ? <>Todavía no hay publicaciones en <strong>{section.label}</strong>. Puedes explorar otras categorías.</>
+                    : 'Todavía no hay publicaciones en el catálogo.'} icon={emptyFavorites ? 'heart' : 'search'}
+            action={emptyFavorites
+              ? <a className="btn nt-button nt-button--primary" href={catalogHref()}>Ver catálogo</a>
+              : (activeCount > 0 || section) && <div className="nt-empty-actions">
+                {activeCount > 0 && <Button variant="secondary" onClick={clear}>Limpiar filtros</Button>}
+                {section && <a className="btn nt-button nt-button--primary" href={catalogHref()}>Ver todo el catálogo</a>}
+              </div>} />}
         </div>
       </div>
     </section>
