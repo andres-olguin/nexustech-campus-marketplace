@@ -33,12 +33,12 @@ Los originales están en base-taller1, sin modificaciones, como referencia. La a
 - Tarjetas reutilizables, detalle, reseñas de ejemplo y selección de cantidad y acabado.
 - Favoritos con su propia pantalla.
 - Carrito por producto y acabado, ajuste de cantidades y totales.
-- Publicación validada, eliminación con confirmación y opción de deshacer.
+- Publicación validada, edición rápida de su precio, eliminación con confirmación y opción de deshacer.
 - Pedido simulado con datos de despacho y código de seguimiento.
 - Rastreo del pedido creado, guía original 9876543210 y avance simulado de estados.
 - Acceso y perfil locales; formulario de contacto que registra consultas de demostración.
 - Persistencia local de publicaciones, favoritos, carrito, pedidos, perfil y consultas.
-- Referencia USD mediante una consulta real a una API pública.
+- Referencia USD mediante una API pública, con reutilización del último dato válido.
 - Navegación y formularios adaptables a computadora, tableta y celular.
 
 ## Ejecución
@@ -47,7 +47,7 @@ Para ver la demostración sin instalar, abrir VISTA_PREVIA.html en un navegador 
 
 Para editar, usar Node.js 22.12 o posterior de la rama 22, o Node.js 24. Abrir esta carpeta en Visual Studio Code y ejecutar:
 
-    npm install
+    npm ci
     npm run dev
 
 Abrir la dirección que muestra Vite. Para comprobar y visualizar la compilación:
@@ -55,25 +55,35 @@ Abrir la dirección que muestra Vite. Para comprobar y visualizar la compilació
     npm run build
     npm run preview
 
+Ejecuta `npm test` para comprobar filtros y validación de la referencia USD, y `npm run build:preview` para regenerar VISTA_PREVIA.html después de editar el código.
+
+## Cambiar un precio
+
+1. Crea una publicación con **Publicar equipo**.
+2. Pulsa **Editar precio** en su tarjeta, escribe el nuevo importe en CLP y elige **Guardar precio**.
+3. Comprueba el nuevo importe en el catálogo o en el carrito si el producto ya estaba agregado.
+
+El cambio se guarda en este navegador y se mantiene al recargar. El precio de los pedidos ya confirmados queda registrado en el pedido.
+
 Se utilizó Node.js 24 para la preparación. package-lock.json conserva las versiones resueltas.
 
 ## Organización
 
 | Carpeta o archivo | Responsabilidad |
 | --- | --- |
-| src/components/ui | Botones, campos, mensajes, tarjetas, diálogo, imágenes e íconos. |
+| src/components/ui | Botones, campos, precios, mensajes, tarjetas, diálogo, imágenes e íconos. |
 | src/components/layout | Cabecera, navegación y pie común. |
 | src/components/catalog | Tarjeta de producto, filtros, paginación, presentación y referencia USD. |
-| src/components/shop | Detalle, carrito, publicación y pedido. |
+| src/components/shop | Detalle, carrito, publicación, edición de precio y pedido. |
 | src/pages | Catálogo, favoritos mediante CatalogPage, rastreo, contacto y acceso. |
 | src/hooks/useShop.js | Estado y acciones locales de la tienda. |
 | src/hooks/useHashRoute.js | Navegación por hash y respuesta a atrás/adelante. |
-| src/hooks/useExchangeRate.js | Estados de carga, respuesta y error de la API. |
+| src/hooks/useExchangeRate.js | Solicitud USD, actualización y conservación del último dato válido. |
 | src/hooks/useValidatedForm.js | Valores, validación y foco compartidos entre formularios. |
 | src/services/publicApi.js | Fetch, validación de la respuesta y timeout. |
 | src/data | Configuración original del catálogo, generador y pedido inicial. |
 | src/assets | Fotografías locales, ilustración de respaldo y recursos propios. |
-| src/styles/styles.css | Identidad NexusTech, estados y media queries. |
+| src/styles | Identidad común en styles.css; catálogo, precios y sus reglas responsive en catalog.css. |
 | docs | Diseño previo, wireframes, migración y verificación. |
 | GUIA_PARTE_4.md | Guion y explicación para estudiar. |
 | INTEGRACION.md | Props, contratos y coordinación con el equipo. |
@@ -104,11 +114,12 @@ Si el navegador bloquea el almacenamiento, aparece un mensaje y la aplicación f
 | Selección | Registro válido con fecha más reciente. |
 | Aporte | Comparar precios de hardware en CLP con una referencia aproximada en USD. |
 | Cálculo | Precio CLP dividido por el valor CLP de un USD. |
-| Ubicación | Panel de filtros, tarjetas, detalle y total del carrito. |
-| Carga | Mensaje mientras se consulta; los productos siguen disponibles. |
-| Error | Mensaje y reintento; se conservan los precios CLP. |
+| Ubicación | Barra de moneda del catálogo, tarjetas, detalle y total del carrito. |
+| Carga | El selector muestra la actualización y conserva la conversión anterior si ya existe. |
+| Error | Mensaje y reintento; se mantienen los precios CLP y la última referencia válida si existe. |
 | Timeout | Ocho segundos. |
-| Consulta | Se inicia al pulsar Ver referencia USD; no hay sondeo automático. |
+| Consulta | CLP + USD reutiliza la referencia consultada hace menos de 30 minutos; el botón de actualizar fuerza una consulta. No hay sondeo automático ni solicitudes simultáneas. |
+| Persistencia | La última referencia válida se conserva en localStorage y se recupera hasta siete días después de su consulta. Se muestra la fecha original del dato. |
 | Atribución | Enlace visible a mindicador.cl y fecha del dato. |
 
 El dato se identifica con su fecha; no se presenta como una cotización instantánea. El pedido siempre se calcula en CLP. No se utiliza una tasa inventada si falla la consulta.
@@ -137,7 +148,7 @@ No atribuir al equipo revisiones, commits o decisiones que todavía no realizó.
 
 Los productos y reseñas son datos simulados del trabajo original. No hay verificación real de hardware ni garantías comerciales. Compra, seguimiento, sesión y contacto son demostraciones locales: no hay cobros, envío físico, verificación de credenciales ni envío de correos.
 
-La persistencia corresponde a este navegador y no se sincroniza entre personas o equipos. La referencia USD depende de la conexión y del proveedor. Las fotografías se incrustan para disponer de una vista previa autónoma, lo que aumenta el tamaño del JavaScript compilado; Vite informa un aviso de tamaño de chunk.
+La persistencia corresponde a este navegador y no se sincroniza entre personas o equipos. La referencia USD depende de la conexión y del proveedor. La compilación web carga las fotografías como recursos separados; la vista previa autónoma las incrusta para abrirse sin conexión.
 
 ## Git y colaboración
 

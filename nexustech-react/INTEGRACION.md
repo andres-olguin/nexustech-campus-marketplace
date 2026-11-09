@@ -14,6 +14,7 @@ Instalar Bootstrap e importar sus estilos antes del CSS propio:
 
     import 'bootstrap/dist/css/bootstrap.min.css';
     import './styles/styles.css';
+    import './styles/catalog.css';
 
 La pantalla debe estar dentro de un contenedor con className="nt-app". La implementación de referencia completa está en App.jsx.
 
@@ -37,7 +38,7 @@ Se conservan los nombres de campos del trabajo original para facilitar la transi
 
 | Componente | Entrada | Acción |
 | --- | --- | --- |
-| ProductCard | product, favorite, usdRate opcional. | onFavorite(id), onDetail(product), onAdd(id), onDelete(product). |
+| ProductCard | product, favorite, usdRate opcional. | onFavorite(id), onDetail(product), onAdd(id), onDelete(product), onEditPrice(product) opcional para publicaciones propias. |
 | ProductDetail | product, usdRate opcional. | onAdd(id, cantidad, acabado), onBuy(id, cantidad, acabado). |
 | CartPanel | shop con carrito, total y acciones; usdRate opcional. | onCheckout(), onClose(). |
 | PublishForm | user opcional. | onSave(values), onCancel(). |
@@ -71,6 +72,6 @@ La interfaz incluye estados idle, loading, success y error. La implementación r
 | Diseño, navegación y arquitectura | App.jsx, pages, Navbar y docs/DISENO.md. |
 | Datos y funciones | useShop.js, data y validaciones de formularios. |
 | API | publicApi.js, useExchangeRate.js y ExchangeRatePanel. |
-| Parte 4: componentes y responsive | ProductCard, ui, layout, assets y styles.css. |
+| Parte 4: componentes y responsive | ProductCard, PriceDisplay, ui, layout, assets, styles.css y catalog.css. |
 
 Integrar las funciones reales mediante los callbacks, revisar las pantallas completas y ejecutar npm run build. Registrar las contribuciones efectivas con commits y Pull Requests del equipo.

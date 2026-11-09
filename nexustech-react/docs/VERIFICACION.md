@@ -1,5 +1,7 @@
 # Verificación de NexusTech en React
 
+Para las comprobaciones de la versión actualizada, ver [Mejora visual y de precios](MEJORA_VISUAL_PRECIOS.md). Lo que sigue registra la primera versión del taller.
+
 Fecha de revisión: 11 de octubre de 2026.
 
 ## Compilación y vista previa

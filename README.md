@@ -20,11 +20,13 @@
 
 ## Arranque del proyecto React
 
+Para probar la mejora de **componentes visuales y precios**, abre [la vista previa](nexustech-react/VISTA_PREVIA.html) después de descargar y descomprimir el proyecto. El catálogo React incluye edición de precios de tus publicaciones, controles CLP/USD visibles y un diseño adaptable.
+
 El [package.json](nexustech-react/package.json) declara React 19, Vite 7 y Bootstrap 5. Requiere Node.js `^20.19.0` o `>=22.12.0`.
 
 ```bash
 cd nexustech-react
-npm install
+npm ci
 npm run dev
 ```
 
