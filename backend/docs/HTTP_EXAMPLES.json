@@ -1,0 +1,107 @@
+{
+  "capturedAt": "2026-11-09T23:05:36.706Z",
+  "provenance": "Real HTTP responses from isolated PostgreSQL integration tests; synthetic data; IDs do not exist in deployment; no tokens/passwords included.",
+  "examples": [
+    {
+      "method": "GET",
+      "path": "/api/v1/products?limit=101",
+      "status": 400,
+      "response": {
+        "statusCode": 400,
+        "message": [
+          "limit must not be greater than 100"
+        ],
+        "error": "BadRequestException"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/categories",
+      "status": 201,
+      "request": {
+        "name": "Hardware"
+      },
+      "response": {
+        "name": "Hardware",
+        "ownerId": "5f8e169c-4ed8-42ef-a785-454a2678d616",
+        "id": "659b9ecb-27f4-4209-96bd-1f84e6fc6d8a",
+        "createdAt": "2026-11-09T23:05:31.520Z"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products",
+      "status": 201,
+      "request": {
+        "name": "Teclado campus",
+        "description": "Teclado mecánico usado en buen estado",
+        "categoryId": "659b9ecb-27f4-4209-96bd-1f84e6fc6d8a",
+        "price": 65000,
+        "stock": 3
+      },
+      "response": {
+        "name": "Teclado campus",
+        "description": "Teclado mecánico usado en buen estado",
+        "categoryId": "659b9ecb-27f4-4209-96bd-1f84e6fc6d8a",
+        "price": 65000,
+        "stock": 3,
+        "imageUrl": null,
+        "sellerId": "5f8e169c-4ed8-42ef-a785-454a2678d616",
+        "id": "487c5f7c-af87-4e4b-9e7d-6725b52897a6",
+        "createdAt": "2026-11-09T23:05:31.537Z",
+        "isActive": true,
+        "updatedAt": "2026-11-09T23:05:31.537Z"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders",
+      "status": 201,
+      "request": {
+        "shippingAddress": "Retiro campus Viña del Mar",
+        "idempotencyKey": "checkout-test-001"
+      },
+      "response": {
+        "id": "8dd57cf2-b105-4c4d-b897-4b17e720069d",
+        "createdAt": "2026-11-09T23:05:31.662Z",
+        "userId": "23645f71-cfe9-44bf-84c9-da0b248825b1",
+        "status": "confirmed",
+        "total": 130000,
+        "shippingAddress": "Retiro campus Viña del Mar",
+        "idempotencyKey": "checkout-test-001",
+        "items": [
+          {
+            "id": "db5938f6-c457-4b10-9481-c569e1e5c5b6",
+            "createdAt": "2026-11-09T23:05:31.662Z",
+            "orderId": "8dd57cf2-b105-4c4d-b897-4b17e720069d",
+            "productId": "487c5f7c-af87-4e4b-9e7d-6725b52897a6",
+            "sellerId": "5f8e169c-4ed8-42ef-a785-454a2678d616",
+            "name": "Teclado campus",
+            "unitPrice": 65000,
+            "quantity": 2
+          }
+        ],
+        "transactions": [
+          {
+            "id": "3cc00c17-ec76-4883-9f20-91c1d2872362",
+            "createdAt": "2026-11-09T23:05:31.662Z",
+            "orderId": "8dd57cf2-b105-4c4d-b897-4b17e720069d",
+            "status": "approved",
+            "provider": "simulation",
+            "amount": 130000
+          }
+        ],
+        "fulfillments": [
+          {
+            "id": "381eb6dd-1a71-40a6-910d-7231f6b8327d",
+            "createdAt": "2026-11-09T23:05:31.662Z",
+            "orderId": "8dd57cf2-b105-4c4d-b897-4b17e720069d",
+            "sellerId": "5f8e169c-4ed8-42ef-a785-454a2678d616",
+            "status": "confirmed",
+            "updatedAt": "2026-11-09T23:05:31.662Z"
+          }
+        ]
+      }
+    }
+  ]
+}
