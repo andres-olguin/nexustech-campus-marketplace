@@ -1,0 +1,135 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { randomBytes } = require('node:crypto');
+const { mkdtemp } = require('node:fs/promises');
+const { tmpdir } = require('node:os');
+const { join } = require('node:path');
+const request = require('supertest');
+
+test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, async t => {
+  const { default: EmbeddedPostgres } = await import('embedded-postgres');
+  const password = randomBytes(24).toString('hex');
+  const dir = await mkdtemp(join(tmpdir(), 'nexustech-pg-'));
+  const pg = new EmbeddedPostgres({ databaseDir: dir, port: 55439, user: 'postgres', password,
+    persistent: false, initdbFlags: ['--locale=C', '--encoding=UTF8'], onLog: () => {}, onError: () => {} });
+  let db, app;
+  try {
+    await pg.initialise();
+    await pg.start();
+    await pg.createDatabase('nexustech_test');
+    process.env.DATABASE_URL = `postgresql://postgres:${password}@localhost:55439/nexustech_test`;
+    process.env.JWT_SECRET = randomBytes(48).toString('hex');
+    require('reflect-metadata');
+    const { database } = require('../dist/database/data-source');
+    db = database;
+    await db.initialize();
+    console.log('Verified database:', (await db.query('SELECT version()'))[0].version);
+    await t.test('Migration up, down and up on real PostgreSQL', async () => {
+      assert.equal((await db.runMigrations()).length, 1);
+      await db.undoLastMigration();
+      assert.equal((await db.runMigrations()).length, 1);
+    });
+    const { NestFactory } = require('@nestjs/core');
+    const { AppModule } = require('../dist/app.module');
+    const { configureApp } = require('../dist/bootstrap');
+    app = await NestFactory.create(AppModule, { logger: false });
+    const openapi = configureApp(app);
+    await app.init();
+    const http = request(app.getHttpServer());
+    const base = '/api/v1';
+    const auth = token => ({ Authorization: `Bearer ${token}` });
+    const register = async (email, name) => (await http.post(`${base}/auth/register`).send({ email, name, password: 'Demo-password-2026!' }).expect(201)).body;
+    let seller, buyer, other, category, product, order;
+    await t.test('Health checks SQL and Swagger exposes contract', async () => {
+      assert.equal((await http.get(`${base}/health`).expect(200)).body.database, 'up');
+      await http.get('/docs-json').expect(200);
+      assert.ok(openapi.paths[`${base}/orders`].post);
+      assert.ok(openapi.components.schemas.ProductDto.properties.stock);
+    });
+    await t.test('Input validation, unknown fields and protected routes', async () => {
+      await http.post(`${base}/auth/register`).send({ email: 'bad', password: 'short', name: 'x', admin: true }).expect(400);
+      await http.get(`${base}/users/me`).expect(401);
+      await http.get(`${base}/products/not-uuid`).expect(400);
+      await http.get(`${base}/products?limit=101`).expect(400);
+      await http.get(`${base}/products?minPrice=2000&maxPrice=1000`).expect(400);
+    });
+    await t.test('Registration, login, profiles, duplicate email, no password disclosure', async () => {
+      seller = await register('seller@example.test', 'Seller Demo');
+      buyer = await register('buyer@example.test', 'Buyer Demo');
+      other = await register('other@example.test', 'Other Demo');
+      await http.post(`${base}/auth/register`).send({ email: 'SELLER@example.test', password: 'Demo-password-2026!', name: 'Duplicate' }).expect(409);
+      await http.post(`${base}/auth/login`).send({ email: 'seller@example.test', password: 'incorrect' }).expect(401);
+      await http.post(`${base}/auth/login`).send({ email: 'seller@example.test', password: 'Demo-password-2026!' }).expect(200);
+      const profile = (await http.patch(`${base}/users/me`).set(auth(seller.accessToken)).send({ sellerName: 'Campus Seller' }).expect(200)).body;
+      assert.equal(profile.sellerProfile.displayName, 'Campus Seller');
+      assert.ok(profile.buyerProfile.id);
+      assert.equal(JSON.stringify(profile).includes('password'), false);
+    });
+    await t.test('Category/product CRUD, ownership and FK constraints', async () => {
+      category = (await http.post(`${base}/categories`).set(auth(seller.accessToken)).send({ name: 'Hardware' }).expect(201)).body;
+      await http.patch(`${base}/categories/${category.id}`).set(auth(buyer.accessToken)).send({ name: 'Stolen' }).expect(403);
+      product = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Teclado campus', description: 'Teclado mecánico usado en buen estado', categoryId: category.id, price: 65000, stock: 3 }).expect(201)).body;
+      await http.patch(`${base}/products/${product.id}`).set(auth(buyer.accessToken)).send({ price: 1000 }).expect(403);
+      await http.patch(`${base}/products/${product.id}`).set(auth(seller.accessToken)).send({ price: -1 }).expect(400);
+      await http.patch(`${base}/products/${product.id}`).set(auth(seller.accessToken)).send({ price: null }).expect(400);
+      await http.delete(`${base}/categories/${category.id}`).set(auth(seller.accessToken)).expect(409);
+      const page = (await http.get(`${base}/publications?search=teclado&categoryId=${category.id}&minPrice=60000&maxPrice=70000`).expect(200)).body;
+      assert.equal(page.total, 1);
+      assert.equal(page.items[0].id, product.id);
+    });
+    await t.test('Favorites are idempotent and scoped per user', async () => {
+      for (let i = 0; i < 2; i++) await http.put(`${base}/favorites/${product.id}`).set(auth(buyer.accessToken)).expect(200);
+      assert.equal((await http.get(`${base}/favorites`).set(auth(buyer.accessToken)).expect(200)).body.total, 1);
+      assert.equal((await http.get(`${base}/favorites`).set(auth(other.accessToken)).expect(200)).body.total, 0);
+    });
+    await t.test('Cart rejects own product, excess stock and invalid quantity', async () => {
+      await http.put(`${base}/cart`).set(auth(seller.accessToken)).send({ productId: product.id, quantity: 1 }).expect(409);
+      await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: product.id, quantity: 4 }).expect(409);
+      await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: product.id, quantity: 0 }).expect(400);
+      await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: product.id, quantity: 2 }).expect(200);
+      assert.equal((await http.get(`${base}/cart`).set(auth(buyer.accessToken)).expect(200)).body.total, 130000);
+    });
+    await t.test('Concurrent idempotent checkout creates one order and decrements once', async () => {
+      const body = { shippingAddress: 'Retiro campus Viña del Mar', idempotencyKey: 'checkout-test-001' };
+      const results = await Promise.all([1, 2].map(() => http.post(`${base}/orders`).set(auth(buyer.accessToken)).send(body).expect(201)));
+      order = results[0].body;
+      assert.equal(order.id, results[1].body.id);
+      assert.equal(order.total, 130000);
+      assert.equal(order.transactions[0].provider, 'simulation');
+      assert.equal(order.items[0].unitPrice, 65000);
+      assert.equal((await http.get(`${base}/products/${product.id}`)).body.stock, 1);
+      assert.equal((await http.get(`${base}/cart`).set(auth(buyer.accessToken))).body.items.length, 0);
+      await http.get(`${base}/orders/${order.id}`).set(auth(other.accessToken)).expect(404);
+      await http.post(`${base}/orders`).set(auth(buyer.accessToken)).send({ ...body, shippingAddress: 'Otra dirección de retiro' }).expect(409);
+    });
+    await t.test('Two buyers racing for last unit cannot oversell', async () => {
+      await http.put(`${base}/cart`).set(auth(buyer.accessToken)).send({ productId: product.id, quantity: 1 }).expect(200);
+      await http.put(`${base}/cart`).set(auth(other.accessToken)).send({ productId: product.id, quantity: 1 }).expect(200);
+      const results = await Promise.all([buyer, other].map(user => http.post(`${base}/orders`).set(auth(user.accessToken)).send({ shippingAddress: 'Retiro campus principal', idempotencyKey: 'race-last-unit' })));
+      assert.deepEqual(results.map(r => r.status).sort(), [201, 409]);
+      assert.equal((await http.get(`${base}/products/${product.id}`)).body.stock, 0);
+      const loser = results[0].status === 409 ? buyer : other;
+      assert.equal((await http.get(`${base}/cart`).set(auth(loser.accessToken))).body.items.length, 1);
+      assert.equal((await db.query('SELECT count(*)::int AS n FROM orders WHERE "idempotencyKey" = $1', ['race-last-unit']))[0].n, 1);
+    });
+    await t.test('Cancellation restores stock once and reverses simulation', async () => {
+      const results = await Promise.all([1, 2].map(() => http.patch(`${base}/orders/${order.id}/status`).set(auth(buyer.accessToken)).send({ status: 'cancelled' })));
+      assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+      assert.equal((await http.get(`${base}/products/${product.id}`)).body.stock, 2);
+      const cancelled = (await http.get(`${base}/orders/${order.id}`).set(auth(buyer.accessToken))).body;
+      assert.equal(cancelled.status, 'cancelled');
+      assert.equal(cancelled.transactions[0].status, 'reversed');
+      await http.patch(`${base}/orders/${order.id}/status`).set(auth(buyer.accessToken)).send({ status: 'paid' }).expect(400);
+    });
+    await t.test('Archiving preserves order snapshots and excludes public catalog', async () => {
+      await http.delete(`${base}/products/${product.id}`).set(auth(seller.accessToken)).expect(200);
+      await http.get(`${base}/products/${product.id}`).expect(404);
+      assert.equal((await http.get(`${base}/products`)).body.total, 0);
+      assert.equal((await http.get(`${base}/orders/${order.id}`).set(auth(buyer.accessToken))).body.items[0].name, 'Teclado campus');
+    });
+  } finally {
+    if (app) await app.close();
+    if (db?.isInitialized) await db.destroy();
+    await pg.stop();
+  }
+});
