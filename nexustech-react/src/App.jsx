@@ -8,6 +8,7 @@ import Icon from './components/ui/Icon.jsx';
 import CartPanel from './components/shop/CartPanel.jsx';
 import CheckoutForm from './components/shop/CheckoutForm.jsx';
 import ProductDetail from './components/shop/ProductDetail.jsx';
+import DetailNavigation from './components/shop/DetailNavigation.jsx';
 import PublishForm from './components/shop/PublishForm.jsx';
 import EditPriceForm from './components/shop/EditPriceForm.jsx';
 import CatalogPage from './pages/CatalogPage.jsx';
@@ -42,9 +43,28 @@ export default function App() {
   const close = () => setWindow(null);
   const openCart = () => setWindow({ type: 'cart' });
   const openPublish = useCallback(() => setWindow({ type: 'publish' }), []);
-  const openDetail = useCallback((product) => setWindow({ type: 'detail', product }), []);
+  const openDetail = useCallback((product, orderedProducts) => {
+    const index = orderedProducts?.findIndex(({ id }) => id === product.id) ?? -1;
+    setWindow({ type: 'detail', products: index < 0 ? [product] : orderedProducts, index: Math.max(0, index) });
+  }, []);
   const openDelete = useCallback((product) => setWindow({ type: 'delete', product }), []);
   const openPrice = useCallback((product) => setWindow({ type: 'price', product }), []);
+  const detail = window?.type === 'detail' ? window : null;
+  const detailProduct = detail ? detail.products[detail.index] : null;
+  function moveDetail(direction) {
+    setWindow((current) => {
+      if (current?.type !== 'detail') return current;
+      const index = current.index + direction;
+      return index >= 0 && index < current.products.length ? { ...current, index } : current;
+    });
+  }
+  function navigateWithKeys(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('input, select, textarea, [contenteditable]')) return;
+    const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    moveDetail(direction);
+  }
   function publish(values) {
     shop.publish(values);
     setCatalogVersion((current) => current + 1);
@@ -63,7 +83,7 @@ export default function App() {
     const order = shop.checkout(values);
     if (order) setWindow({ type: 'confirmed', order });
   }
-  const title = !window ? '' : window.type === 'detail' ? window.product.nombre : ({
+  const title = !window ? '' : detailProduct ? detailProduct.nombre : ({
     cart: 'Tu carrito', publish: 'Publicar producto', checkout: 'Despacho y pedido simulado',
     confirmed: 'Pedido confirmado', delete: 'Eliminar publicación', reset: 'Restaurar demostración', price: 'Editar precio',
   })[window.type];
@@ -83,9 +103,12 @@ export default function App() {
     <Footer storage={shop.storage} onReset={() => setWindow({ type: 'reset' })} />
   </main>
     {shop.notice && <div className="nt-notice-area"><Alert tone="success" title={shop.notice.title} onDismiss={shop.dismissNotice} action={shop.notice.undo ? <Button variant="secondary" icon="undo" onClick={shop.undoDelete}>Deshacer</Button> : null}>{shop.notice.message}</Alert></div>}
-    <Dialog open={Boolean(window)} title={title} description={window?.type === 'detail' ? 'Detalles, opciones y reseñas de ejemplo.' : descriptions[window?.type]} onClose={close} wide={window?.type === 'detail'} drawer={window?.type === 'cart'}>
+    <Dialog open={Boolean(window)} title={title} description={detail ? 'Detalles, opciones y reseñas de ejemplo.' : descriptions[window?.type]}
+      onClose={close} wide={Boolean(detail)} drawer={window?.type === 'cart'} viewKey={detailProduct?.id}
+      onKeyDown={detail ? navigateWithKeys : undefined}
+      navigation={detail && <DetailNavigation index={detail.index} count={detail.products.length} onMove={moveDetail} />}>
       {window?.type === 'cart' && <CartPanel shop={shop} onCheckout={() => setWindow({ type: 'checkout' })} onClose={close} usdRate={usdRate} />}
-      {window?.type === 'detail' && <ProductDetail key={window.product.id} product={window.product} usdRate={usdRate} onAdd={addFromDetail} onBuy={buyFromDetail} />}
+      {detailProduct && <ProductDetail key={detailProduct.id} product={detailProduct} usdRate={usdRate} onAdd={addFromDetail} onBuy={buyFromDetail} />}
       {window?.type === 'publish' && <PublishForm user={shop.user} onSave={publish} onCancel={close} />}
       {window?.type === 'price' && <EditPriceForm key={window.product.id} product={window.product} usdRate={usdRate} onCancel={close} onSave={(price) => { if (shop.updatePrice(window.product.id, price)) close(); }} />}
       {window?.type === 'checkout' && <CheckoutForm total={shop.total} user={shop.user} onConfirm={confirmOrder} onCancel={openCart} />}

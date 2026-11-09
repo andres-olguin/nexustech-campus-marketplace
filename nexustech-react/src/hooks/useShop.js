@@ -93,6 +93,8 @@ export default function useShop() {
       id: crypto.randomUUID(), nombre: values.nombre.trim(), categoria: values.categoria,
       precio: Number(values.precio), imagen: values.imagen.trim() || placeholder,
       descripcion: values.descripcion.trim(), vendedor: values.vendedor.trim(),
+      marca: values.marca?.trim() || '', linea: values.linea?.trim() || '',
+      tipo: values.tipo?.trim() || '', fichaTecnica: values.fichaTecnica?.trim() || '',
       contacto: state.usuario?.email || 'contacto de demostración', reseñas: [],
     };
     setState((current) => ({ ...current, publicaciones: [product, ...current.publicaciones] }));

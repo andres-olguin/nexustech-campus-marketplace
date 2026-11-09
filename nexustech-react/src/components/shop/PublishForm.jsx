@@ -18,7 +18,33 @@ function validate(values) {
   return errors;
 }
 export default function PublishForm({ user, onSave, onCancel }) {
-  const form = useValidatedForm({ nombre: '', categoria: 'Hardware', precio: '', imagen: '', descripcion: '', vendedor: user?.nombre || '' }, validate, onSave);
+  const form = useValidatedForm({
+    nombre: '', categoria: 'Hardware', precio: '', imagen: '', descripcion: '', vendedor: user?.nombre || '',
+    marca: '', linea: '', tipo: '', fichaTecnica: '',
+  }, validate, onSave);
   const props = (name) => ({ name, value: form.values[name], onChange: form.change, error: form.errors[name] });
-  return <form ref={form.ref} onSubmit={form.submit} noValidate><Field label="Nombre del producto" {...props('nombre')} autoFocus required maxLength={160} placeholder="Ej. Teclado mecánico para programación" /><div className="nt-form-row"><Field label="Precio en CLP" {...props('precio')} type="number" inputMode="numeric" min={MIN_PRICE} max={MAX_PRICE} step="1" required placeholder="65000" /><Field label="Categoría" {...props('categoria')} as="select" required>{categories.map((cat) => <option key={cat}>{cat}</option>)}</Field></div><Field label="Enlace de imagen (opcional)" {...props('imagen')} type="url" maxLength={1000} placeholder="https://..." hint="Si lo dejas vacío, se usa una ilustración local." /><Field label="Descripción y estado" {...props('descripcion')} as="textarea" rows={3} required maxLength={2000} placeholder="Describe las especificaciones y el estado del equipo." /><Field label="Responsable de la publicación" {...props('vendedor')} required maxLength={80} /><div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button type="submit" icon="plus">Publicar producto</Button></div></form>;
+  return <form ref={form.ref} onSubmit={form.submit} noValidate>
+    <Field label="Nombre del producto" {...props('nombre')} autoFocus required maxLength={160} placeholder="Ej. Teclado mecánico para programación" />
+    <div className="nt-form-row">
+      <Field label="Precio en CLP" {...props('precio')} type="number" inputMode="numeric" min={MIN_PRICE} max={MAX_PRICE} step="1" required placeholder="65000" />
+      <Field label="Categoría" {...props('categoria')} as="select" required>{categories.map((cat) => <option key={cat}>{cat}</option>)}</Field>
+    </div>
+    <Field label="Enlace de imagen (opcional)" {...props('imagen')} type="url" maxLength={1000} placeholder="https://..." hint="Si lo dejas vacío, se usa una ilustración local." />
+    <Field label="Descripción y estado" {...props('descripcion')} as="textarea" rows={3} required maxLength={2000} placeholder="Describe las especificaciones y el estado del equipo." />
+    <Field label="Responsable de la publicación" {...props('vendedor')} required maxLength={80} />
+    <details className="nt-product-specs nt-publish-specs">
+      <summary>Datos para los filtros <span>Opcional</span></summary>
+      <div className="nt-product-specs-body">
+        <div className="nt-form-row">
+          <Field label="Marca del producto" {...props('marca')} maxLength={80} placeholder="Ej. Lenovo" />
+          <Field label="Línea o serie" {...props('linea')} maxLength={80} placeholder="Ej. ThinkPad" />
+        </div>
+        <Field label="Tipo de producto" {...props('tipo')} maxLength={80} placeholder="Ej. Notebook, monitor o teclado" />
+        <Field label="Especificaciones técnicas" {...props('fichaTecnica')} as="textarea" rows={3} maxLength={1500}
+          placeholder="Ej. Intel Core i7-13700H, 16 GB RAM DDR5, SSD 512 GB, pantalla IPS 144 Hz"
+          hint="Agrega los datos que conozcas para que el producto aparezca en los filtros correspondientes." />
+      </div>
+    </details>
+    <div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button type="submit" icon="plus">Publicar producto</Button></div>
+  </form>;
 }

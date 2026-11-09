@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Button from '../components/ui/Button.jsx';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import Field from '../components/ui/Field.jsx';
@@ -8,7 +8,7 @@ import ExchangeRatePanel from '../components/catalog/ExchangeRatePanel.jsx';
 import FilterPanel from '../components/catalog/FilterPanel.jsx';
 import Pagination from '../components/catalog/Pagination.jsx';
 import ProductCard from '../components/catalog/ProductCard.jsx';
-import { filterCatalog } from '../utils/catalog.js';
+import { activeFacetLabels, facetCatalog, filterCatalog } from '../utils/catalog.js';
 import { categories, formatNumber } from '../utils/format.js';
 import { MAX_PRICE } from '../utils/pricing.js';
 
@@ -26,15 +26,33 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
   const [sort, setSort] = useState('default');
   const [page, setPage] = useState(1);
+  const [facets, setFacets] = useState({});
   const favorites = favoriteOnly ? shop.favoriteSet : null;
-  const activeCount = Number(Boolean(query.trim())) + Number(category !== 'all') + Number(maxPrice < MAX_PRICE) + Number(sort !== 'default');
+  const facetLabels = activeFacetLabels(facets);
+  const activeCount = Number(Boolean(query.trim())) + Number(category !== 'all') + Number(maxPrice < MAX_PRICE) + Number(sort !== 'default') + facetLabels.length;
 
   function update(setter, value) { setter(value); setPage(1); }
-  function clear() { setQuery(''); setCategory('all'); setMaxPrice(MAX_PRICE); setSort('default'); setPage(1); }
-  const filtered = useMemo(
+  function clear() { setQuery(''); setCategory('all'); setMaxPrice(MAX_PRICE); setSort('default'); setFacets({}); setPage(1); }
+  function changeCategory(value) {
+    if (value === category) return;
+    update(setCategory, value);
+    setFacets({});
+  }
+  function changeFacet(key, value) {
+    setFacets((current) => {
+      const next = { ...current };
+      if (value) next[key] = value;
+      else delete next[key];
+      return next;
+    });
+    setPage(1);
+  }
+  const candidates = useMemo(
     () => filterCatalog(shop.products, { query, category, maxPrice, sort, favorites }),
     [shop.products, query, category, maxPrice, sort, favorites]
   );
+  const { results: filtered, options } = useMemo(() => facetCatalog(candidates, facets), [candidates, facets]);
+  const inspect = useCallback((product) => onDetail(product, filtered), [onDetail, filtered]);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
   const first = (safePage - 1) * PER_PAGE;
@@ -69,16 +87,21 @@ export default function CatalogPage({ shop, favoriteOnly = false, onDetail, onDe
       </div>
       <div className="nt-category-shortcuts" role="group" aria-label="Líneas de productos">
         {browseCategories.map((cat) => <Button key={cat} variant="ghost" icon={categoryIcons[cat]} aria-pressed={category === cat}
-          onClick={() => update(setCategory, category === cat ? 'all' : cat)}>{cat === 'all' ? 'Todas' : cat}</Button>)}
+          onClick={() => changeCategory(category === cat ? 'all' : cat)}>{cat === 'all' ? 'Todas' : cat}</Button>)}
       </div>
       <ExchangeRatePanel exchange={exchange} showUSD={showUSD} onCurrency={onCurrency} />
       <div className="nt-catalog-layout">
-        <FilterPanel category={category} onCategory={(value) => update(setCategory, value)} maxPrice={maxPrice}
-          onMaxPrice={(value) => update(setMaxPrice, value)} onClear={clear} activeCount={activeCount} />
+        <FilterPanel category={category} onCategory={changeCategory} maxPrice={maxPrice}
+          onMaxPrice={(value) => update(setMaxPrice, value)} onClear={clear} activeCount={activeCount}
+          options={options} selections={facets} onFacetChange={changeFacet} />
         <div className="nt-results">
+          {facetLabels.length > 0 && <div className="nt-facet-chips" role="group" aria-label="Filtros técnicos aplicados">
+            {facetLabels.map(({ key, label }) => <Button key={key} variant="ghost" icon="close"
+              aria-label={'Quitar filtro ' + label} onClick={() => changeFacet(key, '')}>{label}</Button>)}
+          </div>}
           {visible.length ? <>
             <div className="nt-product-grid">{visible.map((product) => <ProductCard key={product.id} product={product}
-              favorite={shop.favoriteSet.has(product.id)} onFavorite={shop.toggleFavorite} onDetail={onDetail} onAdd={shop.addToCart}
+              favorite={shop.favoriteSet.has(product.id)} onFavorite={shop.toggleFavorite} onDetail={inspect} onAdd={shop.addToCart}
               onDelete={onDelete} onEditPrice={shop.editableIds.has(product.id) ? onEditPrice : undefined} usdRate={usdRate} />)}</div>
             <Pagination page={safePage} totalPages={pages} onChange={(next) => { setPage(next); scrollToResults(); }} />
           </> : <EmptyState title={favoriteOnly && !shop.favoriteSet.size ? 'Todavía no guardaste favoritos' : 'No encontramos productos'}

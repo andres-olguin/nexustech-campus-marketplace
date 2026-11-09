@@ -1,5 +1,7 @@
 # Parte 4 — Componentes visuales y precios
 
+Este documento registra la primera mejora visual y de precios. La siguiente revisión agrega [filtros y navegación](FILTROS_Y_NAVEGACION.md).
+
 Base: commit `b9d4de9` de NexusTech Campus Marketplace. Los 99 archivos del ZIP recibido coincidieron con la copia del repositorio. La mejora se ejecuta en `nexustech-react/`.
 
 ## Demostración

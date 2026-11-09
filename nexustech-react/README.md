@@ -30,7 +30,9 @@ Los originales están en base-taller1, sin modificaciones, como referencia. La a
 ## Funcionalidades
 
 - Catálogo, búsqueda sin distinguir tildes, categorías, presupuesto, orden y paginación.
+- Filtros técnicos que se adaptan a los resultados, con opciones y conteos para cada sección.
 - Tarjetas reutilizables, detalle, reseñas de ejemplo y selección de cantidad y acabado.
+- Detalle con ficha técnica y flechas para recorrer los productos de la búsqueda.
 - Favoritos con su propia pantalla.
 - Carrito por producto y acabado, ajuste de cantidades y totales.
 - Publicación validada, edición rápida de su precio, eliminación con confirmación y opción de deshacer.
@@ -64,6 +66,14 @@ Ejecuta `npm test` para comprobar filtros y validación de la referencia USD, y 
 3. Comprueba el nuevo importe en el catálogo o en el carrito si el producto ya estaba agregado.
 
 El cambio se guarda en este navegador y se mantiene al recargar. El precio de los pedidos ya confirmados queda registrado en el pedido.
+
+## Filtrar y recorrer el catálogo
+
+Busca **notebook** y abre **Filtros**. El panel muestra los campos que tienen datos entre los resultados. Por ejemplo, en **RAM** puedes seleccionar una cantidad mínima. Pulsa una etiqueta de filtro para quitar ese criterio.
+
+Abre **Ver detalle** y usa las flechas para pasar al artículo anterior o siguiente sin cerrar la ventana. El recorrido respeta los filtros y el orden, incluso cuando el siguiente artículo está en otra página. En el formulario de publicación puedes añadir datos técnicos opcionales para que el producto aparezca en más filtros.
+
+Ver [Filtros y navegación](docs/FILTROS_Y_NAVEGACION.md).
 
 Se utilizó Node.js 24 para la preparación. package-lock.json conserva las versiones resueltas.
 
