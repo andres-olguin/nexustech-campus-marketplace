@@ -1,6 +1,7 @@
 ﻿# NexusTech API v1 — contrato de integración
 
 Base: http://localhost:3000/api/v1. Swagger: /docs; OpenAPI: /docs-json.
+Canónico: NestJS/TypeORM de PR #4; incompatible con servidor Express de 2a9a76d. [Guía React](FRONTEND_INTEGRATION_GUIDE.md), [eventos Mongo](ACTIVITY_INTEGRATION.md) y [JSON capturado de HTTP real aislado](../../backend/docs/HTTP_EXAMPLES.json). Los UUID de ejemplos son de prueba, no registros del despliegue.
 JSON camelCase; identificadores UUID; fechas ISO UTC; precios enteros CLP.
 Autorización: Bearer accessToken obtenido en /auth/login o /auth/register. Nunca enviar userId para suplantar al usuario.
 
@@ -43,6 +44,9 @@ Ejemplo pedido: {"shippingAddress":"Retiro campus Viña del Mar","idempotencyKey
 Pedido: {id,userId,status,total,shippingAddress,idempotencyKey,createdAt,items:[{id,orderId,productId,sellerId,name,unitPrice,quantity,createdAt}],transactions:[{id,orderId,status,amount,provider:"simulation",createdAt}],fulfillments:[{id,orderId,sellerId,status,createdAt,updatedAt}]}.
 Carrito: {items:[{id,userId,productId,quantity,product}],total}; favoritos: página de {id,userId,productId,product}.
 Usuario propio: {id,email,name,createdAt,buyerProfile:{id,userId},sellerProfile:{id,userId,displayName}}; no se exponen hashes.
+BuyerProfile y SellerProfile incluyen createdAt. Categoría: {id,name,ownerId,createdAt}. Todos los UUID deben existir en PostgreSQL; no basta generar uno en React. No hay endpoint público de perfil ajeno, listado general de usuarios ni consulta pública de pedidos por código TRK.
+
+Límites adicionales: name de registro/perfil 3..80, sellerName 3..80, category.name 3..80, email 3..254, password de registro 12..128, shippingAddress 10..500, imageUrl HTTPS 1..1000 si se informa. ProductDto requiere name,description,categoryId,price,stock; PATCH permite subconjunto de esos campos y imageUrl. Precio/stock/quantity deben ser números JSON enteros, no strings de formulario. imageUrl null corresponde a ausencia de imagen; ningún precio/cantidad/identificador admite null.
 
 ## Reglas y relaciones
 Usuario tiene perfil comprador y vendedor 1:1, carrito lógico y favoritos. Categoría tiene muchos productos; vendedor es dueño del producto. Pedido tiene detalles con nombre/precio históricos y transacción simulada. FK restringen borrado de productos pedidos. Productos se archivan. Cantidad 1..100; stock 0..100000; precio 1000..2500000; nombre 3..160; descripción 10..2000. Registro crea ambos perfiles. Categorías solo se borran sin productos. No se compra publicación propia. Checkout bloquea usuario y productos, verifica inventario, descuenta stock, crea detalles/transacción y vacía carrito en una transacción SQL. IdempotencyKey único por usuario (8..100 caracteres alfanuméricos, guion o guion bajo); reintento devuelve pedido existente; con distinta dirección devuelve 409. Estado inicial confirmed (simulación); solo confirmed→cancelled, repone inventario exactamente una vez. Cancelación repetida o reposición que exceda 100000 devuelve 409. No hay cobros reales.

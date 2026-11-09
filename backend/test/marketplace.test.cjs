@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
-const { mkdtemp, rm } = require('node:fs/promises');
+const { mkdtemp, rm, mkdir, writeFile } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join, resolve, sep } = require('node:path');
 const { execFile, spawn } = require('node:child_process');
@@ -50,6 +50,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
     const auth = token => ({ Authorization: `Bearer ${token}` });
     const register = async (email, name) => (await http.post(`${base}/auth/register`).send({ email, name, password: 'Demo-password-2026!' }).expect(201)).body;
     let seller, buyer, other, category, product, order;
+    const examples = [];
     await t.test('Health checks SQL and Swagger exposes contract', async () => {
       assert.equal((await http.get(`${base}/health`).expect(200)).body.database, 'up');
       await http.get('/docs-json').expect(200);
@@ -65,7 +66,8 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       await http.get(`${base}/users/me`).expect(401);
       await http.get(`${base}/users/me`).set('x-user-id', 'usr-demo').expect(401);
       await http.get(`${base}/products/not-uuid`).expect(400);
-      await http.get(`${base}/products?limit=101`).expect(400);
+      const invalid = await http.get(`${base}/products?limit=101`).expect(400);
+      examples.push({ method: 'GET', path: `${base}/products?limit=101`, status: invalid.status, response: invalid.body });
       await http.get(`${base}/products?minPrice=2000&maxPrice=1000`).expect(400);
     });
     await t.test('Registration, login, profiles, duplicate email, no password disclosure', async () => {
@@ -82,8 +84,10 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
     });
     await t.test('Category/product CRUD, ownership and FK constraints', async () => {
       category = (await http.post(`${base}/categories`).set(auth(seller.accessToken)).send({ name: 'Hardware' }).expect(201)).body;
+      examples.push({ method: 'POST', path: `${base}/categories`, status: 201, request: { name: 'Hardware' }, response: category });
       await http.patch(`${base}/categories/${category.id}`).set(auth(buyer.accessToken)).send({ name: 'Stolen' }).expect(403);
       product = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Teclado campus', description: 'Teclado mecánico usado en buen estado', categoryId: category.id, price: 65000, stock: 3 }).expect(201)).body;
+      examples.push({ method: 'POST', path: `${base}/products`, status: 201, request: { name: product.name, description: product.description, categoryId: product.categoryId, price: product.price, stock: product.stock }, response: product });
       await http.patch(`${base}/products/${product.id}`).set(auth(buyer.accessToken)).send({ price: 1000 }).expect(403);
       await http.patch(`${base}/products/${product.id}`).set(auth(seller.accessToken)).send({ price: -1 }).expect(400);
       await http.patch(`${base}/products/${product.id}`).set(auth(seller.accessToken)).send({ price: null }).expect(400);
@@ -108,6 +112,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       const body = { shippingAddress: 'Retiro campus Viña del Mar', idempotencyKey: 'checkout-test-001' };
       const results = await Promise.all([1, 2].map(() => http.post(`${base}/orders`).set(auth(buyer.accessToken)).send(body).expect(201)));
       order = results[0].body;
+      examples.push({ method: 'POST', path: `${base}/orders`, status: 201, request: body, response: order });
       assert.equal(order.id, results[1].body.id);
       assert.equal(order.total, 130000);
       assert.equal(order.transactions[0].provider, 'simulation');
@@ -257,6 +262,11 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
         }
       }
     });
+    if (process.env.NEXUSTECH_CAPTURE_EXAMPLES === '1') {
+      await mkdir('docs', { recursive: true });
+      await writeFile('docs/HTTP_EXAMPLES.json', JSON.stringify({ capturedAt: new Date().toISOString(),
+        provenance: 'Real HTTP responses from isolated PostgreSQL integration tests; synthetic data; IDs do not exist in deployment; no tokens/passwords included.', examples }, null, 2) + '\n');
+    }
   } finally {
     if (app) await app.close();
     if (db?.isInitialized) await db.destroy();

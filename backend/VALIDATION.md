@@ -1,5 +1,7 @@
 # Evidencia de validación — 9 de noviembre de 2026
 
+Este informe conserva la evidencia de la primera fase (`2f7f484`). Para seguimiento multivendedor, reinicios reales y estado de la segunda fase, consultar [PHASE2_REPORT.md](PHASE2_REPORT.md).
+
 Worktree: `../nexustech-codex-backend`. Rama: `feat/hito3-codex-backend`. Alcance de archivos: `backend/` y `docs/hito3/api-contract.md`; sin cambios en frontend, Compose o `backend/src/activity/`.
 
 ## Resultado final ejecutado

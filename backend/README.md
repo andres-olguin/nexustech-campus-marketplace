@@ -2,6 +2,8 @@
 
 API NestJS 11, TypeScript, TypeORM y PostgreSQL. Mantiene el marketplace de tecnología para la comunidad estudiantil: catálogo, publicaciones, comprador/vendedor, favoritos, carrito y pedidos con transacciones **simuladas**.
 
+Backend canónico para el Hito 3: PR #4. La variante Express de `2a9a76d` no se integra en este directorio. Ver [revisión del conflicto](../docs/hito3/BACKEND_CONFLICT_REVIEW.md), [guía React](../docs/hito3/FRONTEND_INTEGRATION_GUIDE.md), [contrato Mongo](../docs/hito3/ACTIVITY_INTEGRATION.md) y [demostración aislada](DEMO_PROCEDURE.md).
+
 ## Arranque
 
 Requisitos: Node.js >=22.12, npm y PostgreSQL 16 o superior. Verificado en Windows con Node 26.13 y PostgreSQL 18.6. No se requiere MongoDB para ejecutar este backend. No se modificó Docker Compose.
@@ -56,6 +58,8 @@ erDiagram
   ORDERS ||--|{ ORDER_ITEMS : contains
   PRODUCTS ||--o{ ORDER_ITEMS : references
   ORDERS ||--|| SIMULATED_TRANSACTIONS : simulates
+  ORDERS ||--|{ ORDER_FULFILLMENTS : tracks
+  SELLER_PROFILES ||--o{ ORDER_FULFILLMENTS : advances
 ```
 
 Una publicación es la oferta vendible del producto; no hay una segunda tabla que duplique precio o stock. El carrito es el conjunto de elementos de un usuario, con máximo 100 productos diferentes. Cada cuenta tiene perfiles comprador y vendedor. Categorías son administradas por su creador; solo se borran sin productos asociados. Los productos se archivan para preservar referencias e historial. El estado inicial del pedido es `confirmed`, con transacción `approved` del proveedor `simulation`; no representa un cobro.
@@ -63,6 +67,8 @@ Una publicación es la oferta vendible del producto; no hay una segunda tabla qu
 La integridad relacional está declarada en la migración SQL mediante FK, UNIQUE y CHECK; TypeORM conserva las claves UUID explícitas y los servicios consultan relaciones sin carga implícita. `synchronize` y migraciones automáticas al arrancar están desactivados. Ejecutar migraciones como etapa de despliegue previa al servidor.
 
 Checkout usa transacción SQL y bloquea primero el usuario (mismo bloqueo que modificaciones del carrito) y luego los productos en orden UUID. Verifica todos los elementos antes de escribir; crea pedido/detalles/transacción, descuenta stock y vacía carrito de forma atómica. La clave de idempotencia es única por usuario. Una clave con otra dirección devuelve 409; una clave ya procesada devuelve el pedido original, incluso cancelado. Usar una clave nueva para una compra nueva. Cancelar bloquea pedido y productos, comprueba estado y repone una sola vez. Si la reposición supera 100000 unidades, devuelve 409 y revierte toda la cancelación; debe corregirse inventario antes de reintentar.
+
+Cada pedido incorpora `order_fulfillments`, uno por vendedor, y sellerId histórico en cada detalle. `GET /seller/orders` muestra solo artículos propios y destino necesario; `PATCH /seller/orders/:id/status` permite confirmed→preparing→shipped→delivered, solo al vendedor participante y sin saltos. El agregado es el menor avance entre vendedores. El comprador solo puede cancelar si **todos** siguen confirmed, aunque el agregado aún sea confirmed. Las transiciones y cancelación comparten bloqueo del pedido; avanzar no altera inventario ni la transacción simulada. Los estados son declaraciones para la demostración, sin conexión con transportistas ni prueba real de entrega.
 
 ## Migraciones
 
@@ -74,7 +80,7 @@ npm run build
 npm run migration:run:prod
 ```
 
-La reversión elimina tablas y datos del backend; usarla solo en una base de prueba o con respaldo y autorización operativa. La migración inicial crea diez tablas y sus restricciones/índices. Añadir migraciones nuevas para cambios posteriores: no editar la inicial después de aplicarla en una base compartida. La extensión pgcrypto no se elimina al revertir para no afectar consumidores externos.
+La reversión inicial elimina tablas y datos del backend; usarla solo en una base de prueba o con respaldo y autorización operativa. La primera migración crea diez tablas y sus restricciones/índices. La segunda agrega seguimiento por vendedor y completa datos históricos desde los productos referenciados: once tablas en total. Su reversión se rechaza si ya existe seguimiento avanzado para no borrarlo silenciosamente. Añadir migraciones nuevas para cambios posteriores: no editar las aplicadas en una base compartida. La extensión pgcrypto no se elimina al revertir para no afectar consumidores externos.
 
 ## Pruebas reproducibles
 
@@ -85,9 +91,9 @@ npm audit
 
 `npm test` compila y ejecuta pruebas HTTP con Supertest contra un proceso **real** PostgreSQL aislado mediante `embedded-postgres` (dependencia de desarrollo). Usa el puerto 55439, directorio temporal, credenciales aleatorias y base `nexustech_test`; no utiliza ni borra la base de `.env`. Detiene el proceso y elimina su cluster al terminar. Requiere que el puerto esté libre, binarios compatibles con el sistema y permiso para ejecutar procesos locales. No crear usuarios del sistema ni ejecutar como root en Linux; usar un usuario normal. No es un simulador SQL ni una prueba de conexión al entorno de despliegue.
 
-Se verifican CLIs de migración TypeScript/producción, salud SQL, esquemas Swagger, validaciones, JWT, perfiles, propiedad, claves foráneas, filtros combinados, favoritos, carrito, checkout concurrente/idempotente, competencia por última unidad, reversión de una compra fallida y cancelación concurrente. La suite no prueba React, Docker Compose ni MongoDB.
+Se verifican CLIs de migración TypeScript/producción, salud SQL, esquemas Swagger, validaciones, JWT, perfiles, propiedad, claves foráneas, filtros combinados, favoritos, carrito, checkout concurrente/idempotente, competencia por última unidad, rollback de una compra fallida y cancelación concurrente. También seguimiento multivendedor, permisos y aislamiento de eventos fallidos, carrera cancelación/preparación y persistencia tras reiniciar PostgreSQL y dos procesos API. Requiere puertos 55439 y 55440 disponibles. La suite no prueba React, Docker Compose ni MongoDB.
 
-El lockfile fija las versiones. Overrides de `glob` y `minimatch` corrigen avisos transitivos de la línea TypeORM 0.3. Las migraciones se registran explícitamente, sin patrones glob. Ver [VALIDATION.md](VALIDATION.md) para resultados y correcciones realmente observadas.
+El lockfile fija las versiones. Overrides de `glob` y `minimatch` corrigen avisos transitivos de la línea TypeORM 0.3. Las migraciones se registran explícitamente, sin patrones glob. Ver [VALIDATION.md](VALIDATION.md) para la fase inicial y [PHASE2_REPORT.md](PHASE2_REPORT.md) para esta fase de integración y cierre.
 
 ## Seguridad y errores
 
