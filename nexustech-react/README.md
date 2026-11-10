@@ -4,18 +4,22 @@ Integración completa entre frontend React 19 y backend canónico NestJS 11 con 
 
 ## Integrantes
 
-- Miguel Margas
-- Enrique Chamys
-- Maximiliano Valdés
 - Andrés Olguín
+- Miguel Margas Cerpa
+- Enrique Chamys
+- Benjamín Aguilera
 
 ## Arquitectura del Sistema
 
 El sistema implementa una arquitectura desacoplada full stack:
-- **Frontend:** React 19 + Vite 6 + Vanilla CSS / Bootstrap 5 responsive.
+- **Frontend:** React 19 + Vite 7 + Vanilla CSS / Bootstrap 5 responsive.
 - **Backend canónico:** NestJS 11 (`feat/hito3-codex-backend`, commit `7c72034`, PR #4), modularizado con TypeORM, validación estricta con `class-validator`, y autenticación JWT.
 - **Base de Datos Relacional:** PostgreSQL (migraciones TypeORM, transacciones ACID para pedidos y control de concurrencia en stock).
 - **Base de Datos Documental (Pendiente de integración):** MongoDB (prevista para `ActivityModule`/historial de auditoría).
+
+## Atención para el Hito 3
+
+Este README describe la rama integrada React + NestJS y **no** garantiza todavía el cumplimiento de MongoDB y Docker: son requisitos obligatorios pendientes de integrar y comprobar. La entrega debe descargarse de esta rama o de una rama de integración posterior, no de una `main` desactualizada. Los nombres y aportes individuales deben contrastarse con las ramas y commits reales de cada integrante.
 
 ## Variables de Entorno Frontend
 
@@ -33,9 +37,9 @@ cp .env.example .env
 ### 1. Iniciar Backend (NestJS + PostgreSQL)
 Desde el directorio del backend (`backend/`):
 ```bash
-npm install
+npm ci
+npm run migration:run
 npm run build
-npm run typeorm:run-migrations
 npm run start:dev
 ```
 - API Base: `http://localhost:3000/api/v1`
@@ -44,7 +48,7 @@ npm run start:dev
 ### 2. Iniciar Frontend (React)
 Desde el directorio `nexustech-react/`:
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 Acceder a `http://localhost:5173`.
@@ -70,7 +74,7 @@ npm test
 - Limpieza automática de credenciales JWT al recibir 401.
 - Rechazo estricto ante respuestas incompatibles (evita catálogos fantasma).
 - Inyección de headers de autorización `Bearer <token>`.
-- Generación de claves de idempotencia UUID v4 (`x-idempotency-key`) en checkout.
+- Generación de una clave de idempotencia por compra, enviada en el cuerpo `{shippingAddress,idempotencyKey}` a `POST /api/v1/orders` (no en una cabecera `x-idempotency-key`).
 
 ### Pruebas End-to-End en Navegador Real (Playwright)
 Ejecución:
@@ -84,7 +88,7 @@ El script automatizado `scripts/run-integration.cjs`:
 4. Inicia el servidor de preview de Vite.
 5. Ejecuta la suite de Playwright en Chromium real.
 
-**Resultado:** 5/5 suites aprobadas:
+**Resultado reportado por el agente:** 5/5 pruebas de navegador aprobadas:
 1. `marketplace flow: register -> publish/edit -> favorites/cart -> multi-seller order -> tracking/cancel -> relogin persistence`: Verifica el ciclo completo con usuarios sintéticos compradores y vendedores.
 2. `responsive navigation: desktop and mobile layout adapts correctly`: Prueba renderizado a 390px y 768px.
 3. `checkout retry: lost response retries same real committed order without double purchase`: Idempotencia real comprobada.
