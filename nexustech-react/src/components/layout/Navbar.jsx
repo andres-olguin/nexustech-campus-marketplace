@@ -33,11 +33,9 @@ export default function Navbar({
               className="nt-ribbon-logo"
             />
             <span className="nt-ribbon-text">
-              <strong>Universidad Andrés Bello</strong>
-              <span className="nt-ribbon-sep">/</span>
-              <span>Facultad de Ingeniería</span>
+              <strong>UNAB · Sede Viña del Mar</strong>
               <span className="nt-ribbon-sep">·</span>
-              <span className="nt-ribbon-pill">Taller de Integración 3</span>
+              <span className="nt-ribbon-pill">Desarrollo Web y Móvil · Hito 3</span>
             </span>
           </div>
           <div className="nt-ribbon-right">
@@ -67,7 +65,7 @@ export default function Navbar({
             <strong>
               NEXUS<span>TECH</span>
             </strong>
-            <small>CAMPUS MARKETPLACE · UNAB</small>
+            <small>MARKETPLACE ESTUDIANTIL · VIÑA DEL MAR</small>
           </span>
         </a>
 

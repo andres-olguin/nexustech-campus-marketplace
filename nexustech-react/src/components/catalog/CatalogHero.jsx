@@ -11,18 +11,18 @@ export default function CatalogHero({ count, onPublish }) {
         <div className="nt-hero-badges">
           <span className="nt-academic-chip">
             <img src={unabIsotipo} alt="UNAB" className="nt-mini-logo" />
-            <span>UNAB · TALLER DE INTEGRACIÓN 3</span>
+            <span>UNAB · SEDE VIÑA DEL MAR · DESARROLLO WEB Y MÓVIL</span>
           </span>
-          <Badge variant="cyan">MARKETPLACE UNIVERSITARIO</Badge>
+          <Badge variant="cyan">HITO 3 · PROTOTIPO ESTUDIANTIL</Badge>
         </div>
 
         <h1 id="catalogo-titulo">
           Tecnología que resuelve <span>problemas reales.</span>
         </h1>
         <p>
-          Encuentra hardware, componentes y soluciones informáticas en el
-          marketplace de tu comunidad universitaria. Catálogo con persistencia
-          SQL y stock en tiempo real.
+          Encuentra hardware, componentes y soluciones informáticas entre
+          estudiantes de Viña del Mar. Catálogo con persistencia SQL y stock en
+          tiempo real.
         </p>
 
         <div className="nt-hero-meta">
@@ -56,7 +56,7 @@ export default function CatalogHero({ count, onPublish }) {
           <Icon name="cpu" size={20} />
           <span>
             Hardware & soluciones
-            <small>Campus Hub UNAB</small>
+            <small>Sede Viña del Mar</small>
           </span>
         </div>
 
