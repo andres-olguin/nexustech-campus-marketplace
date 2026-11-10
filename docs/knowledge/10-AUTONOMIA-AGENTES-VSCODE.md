@@ -59,3 +59,20 @@ codex --help
 ```
 
 **No ejecutar `git reset --hard`, `git clean -fd` ni `git worktree prune` para resolver el problema de cambios locales.**
+
+## Error de configuración observado por el estudiante
+No pegar propiedades TOML en PowerShell. Para abrir archivo personal:
+```powershell
+notepad "$HOME\.codex\config.toml"
+```
+Luego guardar `approval_policy = "never"` y `sandbox_mode = "workspace-write"` **en el archivo**, fuera de secciones `[...]`. Si hay claves previas, conservar y evitar duplicados; reiniciar sesión. El sandbox de Codex protege `.git` incluso dentro del workspace: **no prometer git commit/push automáticos con workspace-write + never**; puede denegarlos. El acceso de red se configura por separado y debe evaluarse antes de habilitarlo.
+
+## Informe de Claude Code: limitación de inspección
+Claude inicialmente inspeccionó solo `main` y rama visual local, concluyendo que `AGENTS.md` y `CLAUDE.md` no existían en ninguna rama. **Incorrecto**: esos archivos se crearon en la rama documental `docs/nexustech-defensa-aprendizaje-20261110`. Necesita `git fetch origin`/checkout del worktree documental o lectura remota y debe limitar sus conclusiones al alcance real inspeccionado.
+
+## Worktrees observados a 10-11-2026
+```text
+C:/Users/andre/nexustech-campus-marketplace   [feat/hito3-cierre-integrado]
+C:/Users/andre/nexustech-codex-cli-mongo-qa   [feat/hito3-codex-cli-mongo-qa]
+```
+La rama visual avanzó luego a `48d5979` (Antigravity). La rama documental de tutoría tiene PR #9 abierta y requiere un **tercer worktree** para Claude si empieza a editar. No ejecutar `git checkout` en la carpeta visual mientras Antigravity está activa.
