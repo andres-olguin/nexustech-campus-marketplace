@@ -5,7 +5,7 @@ Problemática seleccionada: **3.4 Marketplace universitario** (NexusTech Store /
 
 ---
 
-## 👥 Integrantes del Equipo
+##Integrantes del Equipo
 
 - **Andrés Olguín**
 - **Miguel Margas**
@@ -14,7 +14,7 @@ Problemática seleccionada: **3.4 Marketplace universitario** (NexusTech Store /
 
 ---
 
-## 📌 1. Descripción del Problema y Usuarios Objetivo
+## Descripción del Problema y Usuarios Objetivo
 
 ### Problemática
 Los estudiantes de la comunidad universitaria no cuentan con un espacio seguro, estructurado y centralizado para comprar, vender o intercambiar artículos tecnológicos y académicos usados (laptops, calculadoras, periféricos, componentes de hardware, libros y apuntes). Actualmente, estas transacciones se realizan de manera informal y dispersa en redes sociales y grupos de mensajería (WhatsApp, Instagram), lo que genera:
@@ -28,7 +28,7 @@ Los estudiantes de la comunidad universitaria no cuentan con un espacio seguro, 
 
 ---
 
-## 🔄 2. Continuidad con Taller 2 y Funcionalidades de Expansión (Hito 3)
+##Continuidad con Taller 2 y Funcionalidades de Expansión (Hito 3)
 
 | Instancia | Enfoque | Resultado |
 |---|---|---|
@@ -45,51 +45,9 @@ Los estudiantes de la comunidad universitaria no cuentan con un espacio seguro, 
 5. **Creación y seguimiento de pedidos:** Checkout transaccional con clave de idempotencia, descuento atómico de inventario y seguimiento multivendedor (`/api/v1/orders`, `/api/v1/seller/orders`).
 6. **Estados de pedidos y transacciones simuladas:** Transiciones estrictas de fulfillment (`confirmed` → `preparing` → `shipped` → `delivered`), cancelación con reposición automática y comprobante de transacción simulada vinculada.
 7. **Persistencia NoSQL complementaria:** Registro documental de eventos de auditoría y conversaciones/mensajes de interacción entre comprador y vendedor (`/api/v1/activity`).
-
 ---
 
-## 🏗️ 3. Arquitectura y Diagrama de Componentes
-
-```mermaid
-flowchart TD
-    subgraph Cliente["Frontend (React 19 + Vite)"]
-        UI[Vistas / Componentes React]
-        SVC[Servicio HTTP: nestApi.js]
-        PUB[Servicio Moneda: publicApi.js]
-        UI --> SVC
-        UI --> PUB
-    end
-
-    subgraph API_Externa["API Pública Externa"]
-        MINDICADOR["mindicador.cl / api / dolar"]
-    end
-    PUB -.->|Tipo de cambio USD/CLP| MINDICADOR
-
-    subgraph BackendApp["Backend API REST (NestJS 11)"]
-        CTRL[Controladores REST + DTOs]
-        AUTH[AuthGuard / JWT]
-        SERVICES[Servicios de Negocio: Catalog, Cart, Orders]
-        EVENTS[EventEmitter2: ActivityEvents]
-        SWAGGER[Swagger / OpenAPI Documentación]
-
-        CTRL --> AUTH
-        CTRL --> SERVICES
-        SERVICES --> EVENTS
-    end
-    SVC -->|HTTP / JSON + Bearer JWT| CTRL
-
-    subgraph Persistencia["Persistencia Híbrida"]
-        PG[(PostgreSQL 16\nTypeORM Relacional)]
-        MONGO[(MongoDB 7\nNoSQL Documental)]
-    end
-
-    SERVICES -->|Transacciones ACID, FK, Locks| PG
-    EVENTS -->|Listeners desacoplados post-commit| MONGO
-```
-
----
-
-## 🛠️ 4. Tecnologías y Versiones Principales
+##Tecnologías y Versiones Principales
 
 - **Frontend:** React 19, Vite 7, Bootstrap 5.3.
 - **Backend:** NestJS 11, TypeScript 5.7 / 6, Node.js 22 LTS, Express platform.
@@ -127,7 +85,7 @@ El documento oficial del Hito 3 exige: *"NoSQL: conversaciones o historial de in
 
 ---
 
-## 📖 6. Descripción de la API y Acceso a Swagger
+## Descripción de la API y Acceso a Swagger
 
 La API sigue las convenciones RESTful con prefijo unificado `/api/v1`. La documentación interactiva está expuesta mediante OpenAPI / Swagger UI:
 
@@ -146,7 +104,7 @@ La API sigue las convenciones RESTful con prefijo unificado `/api/v1`. La docume
 
 ---
 
-## 🌐 7. API Pública: Documentación y Justificación
+## API Pública: Documentación y Justificación
 
 - **API Consumida:** `mindicador.cl`
 - **Endpoint:** `GET https://mindicador.cl/api/dolar`
@@ -155,8 +113,7 @@ La API sigue las convenciones RESTful con prefijo unificado `/api/v1`. La docume
 - **Integración y Resiliencia:** Se consume desde el frontend mediante un servicio HTTP dedicado ([`publicApi.js`](nexustech-react/src/services/publicApi.js)) con almacenamiento en caché local (`localStorage`) de hasta 30 minutos, manejo estricto de estados de carga, reintentos y tolerancia a fallos sin inventar valores ficticios.
 
 ---
-
-## 🐳 8. Instrucciones de Configuración y Ejecución con Docker Compose
+## Instrucciones de Configuración y Ejecución con Docker Compose
 
 ### Requisitos Previos
 - Docker Desktop instalado y en ejecución.
@@ -185,27 +142,7 @@ docker compose up --build
 | **MongoDB** | `nexustech-mongodb` | `localhost:27017` | Base de datos documental NoSQL. |
 
 ---
-
-## ⚙️ 9. Variables de Entorno (`.env.example`)
-
-El repositorio incluye un archivo de plantilla [`.env.example`](.env.example) sin credenciales reales:
-```env
-PORT=3000
-CORS_ORIGINS=http://localhost:5173,http://localhost:80,http://localhost:3000
-JWT_SECRET=reemplazar_con_clave_secreta_de_al_menos_32_caracteres_aleatorios
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=nexustech
-DATABASE_PASSWORD=reemplazar_con_contraseña_segura
-DATABASE_NAME=nexustech
-MONGODB_URI=mongodb://localhost:27017/nexustech
-MONGODB_DB_NAME=nexustech
-VITE_API_BASE_URL=http://localhost:3000/api/v1
-```
-
----
-
-## 🧪 10. Pruebas y Limitaciones Conocidas
+## Pruebas y Limitaciones Conocidas
 
 - **Pruebas Automatizadas:**
   - Backend: Pruebas unitarias y de integración contra base de datos aislada (`backend/test/marketplace.test.cjs`, `backend/test/activity.test.cjs`).
@@ -216,12 +153,5 @@ VITE_API_BASE_URL=http://localhost:3000/api/v1
 
 ---
 
-## 🤖 11. Uso Responsable de Inteligencia Artificial
 
-De acuerdo con lo exigido en la **Sección 10** del documento de evaluación, se reporta el uso de herramientas de IA durante el desarrollo:
 
-| Herramienta | Propósito | Prompt representativo | Resultado | Validación humana | Aprendizaje |
-|---|---|---|---|---|---|
-| **Google Antigravity (Gemini 3.8)** | Análisis de requerimientos y auditoría de duplicados | *"Revisar este repositorio, eliminar cualquier documento repetido y reportar qué falta hacer en relación al documento del Hito 3."* | Identificación de clones redundantes, eliminación de archivos `(1).html` y matriz de brechas de persistencia NoSQL. | Se validaron los hashes SHA-256 de archivos antes de su eliminación física y se cotejó la pauta del Hito 3. | Importancia de auditar ramas remotas y limpiar artefactos de descarga previa antes de integrar. |
-| **OpenAI Codex** | Scaffold de backend NestJS y TypeORM | *"Generar data-source TypeORM con migraciones reversibles y entidades SQL con claves foráneas para marketplace."* | Estructura modular de NestJS, migraciones y esquemas OpenAPI. | Se verificó que las contraseñas usen scrypt con sal y que los DTOs restrinjan los límites de stock y precio. | Las transacciones de checkout requieren locks pesimistas para evitar condiciones de carrera por stock concurrente. |
-| **Google Antigravity** | Módulo NoSQL e integración Docker Compose | *"Implementar módulo ActivityModule en NestJS para persistencia en MongoDB y orquestar Docker Compose."* | Módulo `backend/src/activity/`, controladores de interacción y configuración multicontenedor. | Se aseguró que las fallas de conexión a MongoDB no rompan las transacciones atómicas de PostgreSQL. | El patrón de eventos asíncronos post-commit garantiza desacoplamiento entre el núcleo transaccional SQL y la auditoría NoSQL. |
