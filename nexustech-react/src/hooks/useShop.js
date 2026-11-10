@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createProducts } from '../data/createProducts.js';
 import initialOrders from '../data/ordersDemo.json';
-import { categories, finishes } from '../utils/format.js';
+import { categories, finishes, formatCLP } from '../utils/format.js';
+import { isValidPrice } from '../utils/pricing.js';
 import { placeholder } from '../data/imageAssets.js';
 
 const KEY = 'nexustech-react-v2';
@@ -53,14 +54,19 @@ export default function useShop() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const products = useMemo(() => [...state.publicaciones, ...initialProducts.filter((p) => !state.eliminados.includes(p.id))], [state.publicaciones, state.eliminados]);
+  const availableExamples = useMemo(() => {
+    const removedIds = new Set(state.eliminados);
+    return initialProducts.filter((p) => !removedIds.has(p.id));
+  }, [state.eliminados]);
+  const products = useMemo(() => [...state.publicaciones, ...availableExamples], [state.publicaciones, availableExamples]);
+  const editableIds = useMemo(() => new Set(state.publicaciones.map((p) => p.id)), [state.publicaciones]);
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const cart = state.carrito.map((item) => ({ ...byId.get(item.id), ...item })).filter((item) => item.nombre);
+  const cart = useMemo(() => state.carrito.map((item) => ({ ...byId.get(item.id), ...item })).filter((item) => item.nombre), [state.carrito, byId]);
   const total = cart.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.cantidad, 0);
   const favoriteSet = useMemo(() => new Set(state.favoritos), [state.favoritos]);
 
-  function addToCart(id, quantity = 1, finish = finishes[0]) {
+  const addToCart = useCallback((id, quantity = 1, finish = finishes[0]) => {
     const product = byId.get(id);
     if (!product || !Number.isInteger(quantity) || quantity < 1 || !finishes.includes(finish)) return;
     setState((current) => {
@@ -70,7 +76,7 @@ export default function useShop() {
         : [...current.carrito, { id, acabado: finish, cantidad: Math.min(99, quantity) }] };
     });
     setNotice({ title: 'Producto agregado', message: product.nombre + ' está en tu carrito.' });
-  }
+  }, [byId]);
   function changeQuantity(id, finish, quantity) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) return;
     setState((current) => ({ ...current, carrito: current.carrito.map((item) => item.id === id && item.acabado === finish ? { ...item, cantidad: quantity } : item) }));
@@ -78,20 +84,33 @@ export default function useShop() {
   function removeFromCart(id, finish) {
     setState((current) => ({ ...current, carrito: current.carrito.filter((item) => !(item.id === id && item.acabado === finish)) }));
   }
-  function toggleFavorite(id) {
+  const toggleFavorite = useCallback((id) => {
     if (!byId.has(id)) return;
     setState((current) => ({ ...current, favoritos: current.favoritos.includes(id) ? current.favoritos.filter((x) => x !== id) : [...current.favoritos, id] }));
-  }
+  }, [byId]);
   function publish(values) {
     const product = {
       id: crypto.randomUUID(), nombre: values.nombre.trim(), categoria: values.categoria,
       precio: Number(values.precio), imagen: values.imagen.trim() || placeholder,
       descripcion: values.descripcion.trim(), vendedor: values.vendedor.trim(),
+      marca: values.marca?.trim() || '', linea: values.linea?.trim() || '',
+      tipo: values.tipo?.trim() || '', fichaTecnica: values.fichaTecnica?.trim() || '',
       contacto: state.usuario?.email || 'contacto de demostración', reseñas: [],
     };
     setState((current) => ({ ...current, publicaciones: [product, ...current.publicaciones] }));
     setNotice({ title: 'Publicación creada', message: 'Tu producto ya aparece en el catálogo.' });
     return product;
+  }
+  function updatePrice(id, price) {
+    if (!editableIds.has(id) || !isValidPrice(price)) return false;
+    const product = byId.get(id);
+    if (product.precio === price) return true;
+    setState((current) => ({
+      ...current,
+      publicaciones: current.publicaciones.map((p) => p.id === id ? { ...p, precio: price } : p),
+    }));
+    setNotice({ title: 'Precio actualizado', message: product.nombre + ' ahora cuesta ' + formatCLP(price) + '.' });
+    return true;
   }
   function deleteProduct(id) {
     const product = byId.get(id);
@@ -154,5 +173,5 @@ export default function useShop() {
     setNotice({ title: 'Demostración restaurada', message: 'Se recuperó el catálogo original y el pedido de ejemplo.' });
   }
 
-  return { products, cart, total, cartCount, favoriteSet, user: state.usuario, orders: state.pedidos, contacts: state.consultas, storage, notice, dismissNotice: () => setNotice(null), addToCart, changeQuantity, removeFromCart, toggleFavorite, publish, deleteProduct, undoDelete, checkout, advanceOrder, login, logout, saveContact, resetDemo };
+  return { products, editableIds, cart, total, cartCount, favoriteSet, user: state.usuario, orders: state.pedidos, contacts: state.consultas, storage, notice, dismissNotice: () => setNotice(null), addToCart, changeQuantity, removeFromCart, toggleFavorite, publish, updatePrice, deleteProduct, undoDelete, checkout, advanceOrder, login, logout, saveContact, resetDemo };
 }

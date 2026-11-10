@@ -5,13 +5,16 @@ Este proyecto continúa los archivos de tu Taller 1.
 PARA VERLO:
 Abre VISTA_PREVIA.html después de descomprimir el ZIP.
 La tienda se puede probar sin internet.
-La consulta de referencia USD requiere conexión.
+Elige CLP + USD para consultar una referencia con internet.
+Para cambiar un precio: Publicar equipo → Editar precio → Guardar precio.
 
 PARA TRABAJAR EL CÓDIGO:
 Abre esta carpeta en Visual Studio Code.
 En la terminal:
-npm install
+npm ci
 npm run dev
+
+Para regenerar VISTA_PREVIA.html: npm run build:preview
 
 TU PARTE 4:
 Lee GUIA_PARTE_4.md e INTEGRACION.md.

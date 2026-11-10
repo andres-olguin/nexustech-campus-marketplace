@@ -1,4 +1,51 @@
 export const DOLLAR_ENDPOINT = 'https://mindicador.cl/api/dolar';
+export const DOLLAR_CACHE_KEY = 'nexustech-dollar-v1';
+const SOURCE = 'mindicador.cl';
+const FRESH_MS = 30 * 60 * 1000;
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function parseDollarRate(data, fetchedAt = Date.now()) {
+  if (data?.codigo !== 'dolar' || !Array.isArray(data.serie)) {
+    throw new Error('La API devolvió un formato inesperado.');
+  }
+  let latest = null;
+  let latestTime = -Infinity;
+  for (const record of data.serie) {
+    if (!record || !Number.isFinite(record.valor) || record.valor <= 0 || typeof record.fecha !== 'string') continue;
+    const time = Date.parse(record.fecha);
+    if (time > latestTime) {
+      latest = record;
+      latestTime = time;
+    }
+  }
+  if (!latest) throw new Error('La API no incluyó una tasa válida.');
+  return { value: latest.valor, date: latest.fecha, source: SOURCE, fetchedAt };
+}
+
+function isUsableRate(rate, now = Date.now()) {
+  return rate?.source === SOURCE && Number.isFinite(rate.value) && rate.value > 0 &&
+    typeof rate.date === 'string' && Number.isFinite(Date.parse(rate.date)) &&
+    Number.isFinite(rate.fetchedAt) && rate.fetchedAt <= now && now - rate.fetchedAt < RETENTION_MS;
+}
+
+export function isFreshDollarRate(rate, now = Date.now()) {
+  return isUsableRate(rate, now) && now - rate.fetchedAt < FRESH_MS;
+}
+
+export function readSavedDollarRate() {
+  try {
+    const rate = JSON.parse(localStorage.getItem(DOLLAR_CACHE_KEY));
+    return isUsableRate(rate) ? rate : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDollarRate(rate) {
+  if (!isUsableRate(rate)) return;
+  try { localStorage.setItem(DOLLAR_CACHE_KEY, JSON.stringify(rate)); }
+  catch { /* La referencia sigue disponible en memoria durante la sesión. */ }
+}
 
 // Consulta real; nunca se sustituye una respuesta fallida por una tasa inventada.
 export async function getDollarRate(signal) {
@@ -11,11 +58,7 @@ export async function getDollarRate(signal) {
   try {
     const response = await fetch(DOLLAR_ENDPOINT, { signal: controller.signal });
     if (!response.ok) throw new Error('La API respondió con un error. Intentá nuevamente.');
-    const data = await response.json();
-    if (data.codigo !== 'dolar' || !Array.isArray(data.serie)) throw new Error('La API devolvió un formato inesperado.');
-    const records = data.serie.filter((r) => Number.isFinite(r.valor) && r.valor > 0 && !Number.isNaN(Date.parse(r.fecha))).sort((a, b) => Date.parse(b.fecha) - Date.parse(a.fecha));
-    if (!records.length) throw new Error('La API no incluyó una tasa válida.');
-    return { value: records[0].valor, date: records[0].fecha, source: 'mindicador.cl' };
+    return parseDollarRate(await response.json());
   } catch (error) {
     if (timedOut) throw new Error('La consulta demoró demasiado. Intentá nuevamente.');
     if (signal?.aborted) throw error;
