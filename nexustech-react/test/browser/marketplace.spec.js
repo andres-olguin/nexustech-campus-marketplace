@@ -237,9 +237,11 @@ test("Real browser registration → publication/edit → favorites/cart → mult
   const sold = page.getByRole("article").filter({ hasText: order.id });
   await expect(sold).toContainText(firstName);
   await expect(sold).not.toContainText(secondName);
+  const prepared = page.waitForResponse(r => r.url() === api + "/seller/orders/" + order.id + "/status" && r.request().method() === "PATCH");
   await sold
     .getByRole("button", { name: "Marcar: En preparación", exact: true })
     .click();
+  expect((await prepared).status()).toBe(200);
   await buyer
     .getByRole("button", { name: "Actualizar pedidos", exact: true })
     .click();
@@ -262,10 +264,13 @@ test("Real browser registration → publication/edit → favorites/cart → mult
     "En preparación",
     "Despacho declarado",
     "Entrega declarada",
-  ])
+  ]) {
+    const advanced = third.waitForResponse(r => r.url() === api + "/seller/orders/" + order.id + "/status" && r.request().method() === "PATCH");
     await soldB
       .getByRole("button", { name: "Marcar: " + next, exact: true })
       .click();
+    expect((await advanced).status()).toBe(200);
+  }
   await buyer
     .getByRole("button", { name: "Actualizar pedidos", exact: true })
     .click();
@@ -323,7 +328,7 @@ test("Real browser registration → publication/edit → favorites/cart → mult
   expect(invalid.status()).toBe(400);
   await nav(buyer, "historial");
   await expect(
-    buyer.getByRole("heading", { name: /Historial de Actividad/ }),
+    buyer.getByRole("heading", { name: /Historial de actividad/i }),
   ).toBeVisible();
   expect(errors).toEqual([]);
   await buyer.close();
@@ -342,11 +347,13 @@ test("Mobile navigation and responsive layout, 390px and 768px", async ({
       }),
     ).toBeVisible();
     await expect(page.getByText("Cargando publicaciones…")).toHaveCount(0);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
+    const overflow = await page.evaluate(() => ({
+      width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+      elements: [...document.querySelectorAll("body *")].filter(el => {
+        const rect = el.getBoundingClientRect(); return rect.width && (rect.right > innerWidth + 1 || rect.left < -1);
+      }).slice(0, 12).map(el => ({ tag: el.tagName, className: el.className, width: Math.round(el.getBoundingClientRect().width) })),
+    }));
+    expect(overflow.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width);
     await page.screenshot({
       path: `test-results/catalog-${width}.png`,
       fullPage: true,
@@ -489,7 +496,7 @@ test("A 401 clears the session and does not retain authenticated account data", 
   await nav(page, "catalogo");
   await page.getByRole("button", { name: "Actualizar", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Ingresar", exact: true }),
+    page.getByRole("link", { name: /Iniciar sesi.n o registrarse/ }),
   ).toBeVisible();
   await nav(page, "rastreo");
   await expect(

@@ -3,6 +3,7 @@ import Button from "../ui/Button.jsx";
 import Icon from "../ui/Icon.jsx";
 import ProductImage from "../ui/ProductImage.jsx";
 import { formatCLP } from "../../utils/format.js";
+
 export default function ProductCard({
   product: p,
   category,
@@ -15,6 +16,20 @@ export default function ProductCard({
   own,
   busy,
 }) {
+  const stockClass =
+    p.stock > 3
+      ? "nt-stock-available"
+      : p.stock > 0
+        ? "nt-stock-low"
+        : "nt-stock-empty";
+
+  const stockLabel =
+    p.stock > 3
+      ? `Stock: ${p.stock}`
+      : p.stock > 0
+        ? `Últimas ${p.stock} un.`
+        : "Agotado";
+
   return (
     <article className="nt-product-card">
       <div className="nt-product-photo">
@@ -25,13 +40,13 @@ export default function ProductCard({
         >
           <ProductImage src={p.imageUrl} alt={p.name} loading="lazy" />
         </button>
-        <span className="nt-photo-label">
-          {p.isActive ? "PUBLICACIÓN CAMPUS" : "ARCHIVADA"}
+        <span className={"nt-photo-label" + (!p.isActive ? " is-archived" : "")}>
+          {p.isActive ? "CAMPUS UNAB" : "ARCHIVADO"}
         </span>
         <div className="nt-product-tools">
           <Button
             variant="ghost"
-            className="nt-icon-button"
+            className={"nt-icon-button nt-fav-button" + (favorite ? " is-active" : "")}
             aria-label={
               (favorite ? "Quitar de favoritos: " : "Guardar en favoritos: ") +
               p.name
@@ -47,6 +62,7 @@ export default function ProductCard({
               <Button
                 variant="ghost"
                 icon="edit"
+                className="nt-icon-button"
                 aria-label={"Editar producto: " + p.name}
                 onClick={() => onEdit(p)}
                 disabled={busy}
@@ -54,6 +70,7 @@ export default function ProductCard({
               <Button
                 variant="ghost"
                 icon="trash"
+                className="nt-icon-button"
                 aria-label={"Archivar publicación: " + p.name}
                 onClick={() => onArchive(p)}
                 disabled={busy}
@@ -62,20 +79,28 @@ export default function ProductCard({
           )}
         </div>
       </div>
+
       <div className="nt-product-body">
         <div className="nt-card-meta">
-          <Badge>{category || "Categoría"}</Badge>
-          <span className="nt-stock-tag">Stock: {p.stock}</span>
+          <Badge variant="muted">{category || "General"}</Badge>
+          <span className={"nt-stock-tag " + stockClass}>
+            {stockLabel}
+          </span>
         </div>
-        <h3>
+
+        <h3 className="nt-card-title">
           <button onClick={() => onDetail(p.id)}>{p.name}</button>
         </h3>
+
         <p className="nt-product-seller">
-          {own ? "Tu publicación" : "Vendedor " + p.sellerId.slice(0, 8)}
+          {own ? "Tu publicación propia" : "Vendedor estudiante · " + p.sellerId.slice(0, 8)}
         </p>
+
         <div className="nt-product-price">
           <strong>{formatCLP(p.price)}</strong>
+          <small className="nt-price-currency">CLP</small>
         </div>
+
         <div className="nt-product-buttons">
           <Button variant="secondary" onClick={() => onDetail(p.id)}>
             Ver detalle

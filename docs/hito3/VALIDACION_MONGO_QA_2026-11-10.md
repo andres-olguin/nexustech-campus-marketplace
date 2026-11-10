@@ -9,9 +9,9 @@ Rama de trabajo: feat/hito3-codex-cli-mongo-qa. Destino de PR: feat/hito3-cierre
 |---|---|
 | npm run test:real-mongo --prefix backend | PASS: 20 pruebas, 0 fallos, 0 omitidas; duracion 335346.6319 ms |
 | npm test --prefix nexustech-react | PASS: 13 pruebas, 0 fallos, 0 omitidas |
-| npm run test:e2e --prefix nexustech-react | PASS: 6 pruebas con Chrome/Playwright; 2.6 minutos |
+| npm run test:e2e --prefix nexustech-react | Base inicial: 6/6. Tras integrar 06d946f: 3 aprobadas y 3 fallidas; ver repeticion focalizada y fallo responsive abajo |
 | npm run build --prefix backend | PASS: TypeScript estricto, tambien ejecutado por las suites de integracion |
-| npm run build --prefix nexustech-react | PASS: Vite, 79 modulos transformados |
+| npm run build --prefix nexustech-react | PASS: Vite, 82 modulos transformados tras integrar la base visual |
 | docker compose --env-file .env.example config --quiet | PASS: configuracion/interpolacion |
 | git diff --check | PASS: sin errores de whitespace |
 | docker compose --env-file .env.example up -d --build | NO EJECUTADO CON EXITO: motor Docker Desktop Linux inaccesible |
@@ -75,3 +75,15 @@ No se construyeron/verificaron las cuatro imagenes en ejecucion, ni se comprobar
 No certificar 20/20 sin el enunciado oficial, ni atribuir cambios a un ZIP no inspeccionado. Se necesita el ZIP exacto entregado y su SHA-256 para una comparacion verificable. El registro Canvas a las 23:57 proviene del usuario.
 
 Coordinar con Antigravity la integracion del formulario de destinatario, errores, schemas del cliente y shop.refresh. Su identidad visual, CSS, responsive, carpeta y rama no se modificaron. App.jsx entra por la historia del merge de Enrique. Ver la matriz provisional, arquitectura, limites de produccion y defensa en MONGO_QA_2026-11-10.md.
+
+## Integracion de la base visual
+
+Mientras se publicaba la PR #8, la base habia avanzado de 6af5099 a 06d946f. Se integra esa historia en la rama QA. El unico conflicto era InteractionsPage.jsx: se conserva el encabezado, la estructura y las tarjetas nuevas y se agregan los controles y datos Mongo. La comparacion de assets, CSS y componentes con 06d946f es vacia. Los endpoints y el backend no cambiaron por esa integracion.
+
+### Resultado sobre la interfaz integrada 06d946f
+
+La compilacion React paso con 82 modulos. La suite completa produjo 3 aprobadas (reintento de compra, API incompatible y mensaje Mongo tras nueva sesion) y 3 fallidas. Se corrigieron dos problemas del test: esperar el PATCH real del vendedor antes de refrescar el navegador comprador y usar el nombre accesible actual del enlace de acceso.
+
+Comando focalizado ejecutado: npm run test:e2e --prefix nexustech-react -- --grep "Real browser registration|A 401 clears|Mobile navigation". Resultado: 2 aprobadas (flujo comercial completo y limpieza de sesion 401), 1 fallida (responsive), 2.1 minutos. Por tanto, hay evidencia positiva de los cinco flujos funcionales entre ambas ejecuciones, pero NO una suite final completamente aprobada. No se omitio ni relajo la comprobacion responsive.
+
+Fallo confirmado para Antigravity: viewport 390 px, document.documentElement.scrollWidth = 595 px. Elementos fuera de pantalla: nt-ribbon-left (401 px), nt-ribbon-text (377 px), nt-nav-actions (397 px), carrito, acceso y boton de menu. La captura muestra controles superiores recortados. El caso se detiene a 390 px, por lo que no se certifica 768 px en esta repeticion. No se modifica su CSS: revisar la franja institucional y acciones de navbar, luego repetir la suite completa.

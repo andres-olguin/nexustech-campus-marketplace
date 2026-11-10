@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useRemote } from "../hooks/useShop.js";
 import Alert from "../components/ui/Alert.jsx";
 import Button from "../components/ui/Button.jsx";
-import Field from "../components/ui/Field.jsx";
+import Card from "../components/ui/Card.jsx";
+import Icon from "../components/ui/Icon.jsx";
 
 export default function InteractionsPage({ shop }) {
   const [activeTab, setActiveTab] = useState("logs"); // 'logs' | 'messages'
@@ -49,32 +50,20 @@ export default function InteractionsPage({ shop }) {
     }
   }
 
-  if (!shop.session) {
-    return (
-      <section className="container py-4">
-        <header className="nt-page-heading mb-4">
-          <span className="nt-eyebrow">PERSISTENCIA NOSQL (MONGODB)</span>
-          <h1>Historial de Actividad e Interacciones<span>.</span></h1>
-        </header>
-        <Alert tone="warning" title="Inicio de sesión requerido">
-          Debes iniciar sesión para consultar tu historial de auditoría y tus conversaciones en MongoDB.
-          Ve a <a href="#/acceso">Iniciar Sesión</a>.
-        </Alert>
-      </section>
-    );
-  }
-
   return (
-    <section className="container py-4">
-      <header className="nt-page-heading mb-4">
-        <span className="nt-eyebrow">PERSISTENCIA NOSQL (MONGODB)</span>
-        <h1>Historial de Actividad e Interacciones<span>.</span></h1>
-        <p className="text-muted">
-          Persistencia documental desacoplada de PostgreSQL para auditoría de eventos y mensajes entre compradores y vendedores.
+    <section className="nt-interactions-page">
+      <header className="nt-page-heading">
+        <span className="nt-eyebrow">TELEMETRÍA & ACTIVIDAD ACADÉMICA</span>
+        <h1>
+          Historial de actividad<span>.</span>
+        </h1>
+        <p>
+          Módulo de eventos y auditoría documental diseñado para persistencia en MongoDB.
         </p>
       </header>
 
-      {/* Selector de pestañas */}
+      {shop.session ? (
+        <Card title="Mis eventos y conversaciones">
       <div className="btn-group mb-4" role="group">
         <button
           type="button"
@@ -231,6 +220,74 @@ export default function InteractionsPage({ shop }) {
           )}
         </div>
       )}
+
+        </Card>
+      ) : (
+        <Alert title="Inicio de sesion requerido">
+          Inicia sesion para consultar tus eventos y mensajes privados. <a href="#/acceso">Ingresar</a>.
+        </Alert>
+      )}
+
+      <Alert title="Privacidad y persistencia">
+        Tus mensajes solo son visibles para sus participantes. Los eventos de publicaciones
+        y pedidos se conservan en una cola SQL duradera antes de entregarse a MongoDB.
+        Si un mensaje no se puede guardar, se informa el error. Puedes consultar tus compras en{" "}
+        <a href="#/rastreo" className="nt-link-strong">Pedidos y ventas</a>.
+      </Alert>
+
+      <div className="nt-activity-grid">
+        <Card title="Arquitectura de Eventos Desacoplada">
+          <p className="nt-card-p">
+            NexusTech implementa una arquitectura híbrida donde PostgreSQL maneja la
+            integridad relacional de pedidos y productos, mientras que los eventos de
+            interacción se entregan asíncronamente:
+          </p>
+          <ul className="nt-event-list">
+            <li>
+              <span className="nt-event-badge">product.created</span>
+              <span>Registro de nueva publicación por vendedor autenticado</span>
+            </li>
+            <li>
+              <span className="nt-event-badge">product.updated</span>
+              <span>Modificación de precio, stock o archivo lógico de producto</span>
+            </li>
+            <li>
+              <span className="nt-event-badge">order.created</span>
+              <span>Confirmación de pedido simulado tras descuento transaccional</span>
+            </li>
+            <li>
+              <span className="nt-event-badge">order.fulfillment.updated</span>
+              <span>Actualización de despacho multi-vendedor en campus UNAB</span>
+            </li>
+          </ul>
+        </Card>
+
+        <Card title="Garantías de Seguridad y Privacidad">
+          <div className="nt-security-points">
+            <div className="nt-sec-item">
+              <Icon name="check" size={18} />
+              <div>
+                <strong>Sin datos personales en logs</strong>
+                <p>No se almacenan contraseñas, tokens JWT ni direcciones físicas en eventos.</p>
+              </div>
+            </div>
+            <div className="nt-sec-item">
+              <Icon name="check" size={18} />
+              <div>
+                <strong>Aislamiento de persistencia</strong>
+                <p>Una eventual caída del servicio de telemetría jamás revierte compras SQL confirmadas.</p>
+              </div>
+            </div>
+            <div className="nt-sec-item">
+              <Icon name="check" size={18} />
+              <div>
+                <strong>Autenticación canónica</strong>
+                <p>El servidor verifica el JWT y registra el identificador del actor autenticado.</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
     </section>
   );
 }
