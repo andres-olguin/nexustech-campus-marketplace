@@ -19,6 +19,7 @@ import { OrdersController, SellerOrdersController } from './orders/orders.contro
 import { HealthController } from './health.controller';
 import { ActivityEvents } from './common/activity-events';
 import { ActivityModule } from './activity/activity.module';
+import { ActivityController } from './activity/activity.controller';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { ActivityModule } from './activity/activity.module';
     EventEmitterModule.forRoot(),
     ActivityModule,
   ],
-  controllers: [AuthController, CategoriesController, ProductsController, PublicationsController, UsersController, CartController, FavoritesController, OrdersController, SellerOrdersController, HealthController],
+  controllers: [AuthController, CategoriesController, ProductsController, PublicationsController, UsersController, CartController, FavoritesController, OrdersController, SellerOrdersController, ActivityController, HealthController],
   providers: [ActivityEvents, AuthGuard, AuthService, CatalogService, UsersService, CartService, OrdersService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
