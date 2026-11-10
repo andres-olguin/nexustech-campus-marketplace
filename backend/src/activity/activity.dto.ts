@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 
 export class CreateInteractionDto {
@@ -12,14 +12,14 @@ export class CreateInteractionDto {
   targetType!: 'product' | 'order';
 
   @ApiProperty({ description: 'Contenido del mensaje o consulta', minLength: 2, maxLength: 1000 })
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @Length(2, 1000)
   message!: string;
 
-  @ApiPropertyOptional({ description: 'UUID del destinatario opcional (vendedor o comprador)' })
-  @IsOptional()
+  @ApiProperty({ description: 'UUID del destinatario participante' })
   @IsUUID()
-  receiverId?: string;
+  receiverId!: string;
 }
 
 export class ActivityLimitQuery {

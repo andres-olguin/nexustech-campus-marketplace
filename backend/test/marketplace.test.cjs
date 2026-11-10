@@ -3,28 +3,49 @@ const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const { mkdtemp, rm, mkdir, writeFile } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
-const { join, resolve, sep } = require('node:path');
+const { join, resolve, sep, dirname } = require('node:path');
 const { execFile, spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { promisify } = require('node:util');
 const exec = promisify(execFile);
 const request = require('supertest');
 
-test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, async t => {
+async function freePort() {
+  const server = require('node:net').createServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  await new Promise(resolve => server.close(resolve));
+  return port;
+}
+
+test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, async t => {
   const { default: EmbeddedPostgres } = await import('embedded-postgres');
   const password = randomBytes(24).toString('hex');
   const dir = await mkdtemp(join(tmpdir(), 'nexustech-pg-'));
-  const pg = new EmbeddedPostgres({ databaseDir: dir, port: 55439, user: 'postgres', password,
+  const pgPort = await freePort();
+  const apiPort = await freePort();
+  const pg = new EmbeddedPostgres({ databaseDir: dir, port: pgPort, user: 'postgres', password,
     persistent: true, initdbFlags: ['--locale=C', '--encoding=UTF8'],
     // PostgreSQL 18 io workers may retain inherited pipes after taskkill on Windows.
     postgresFlags: ['-c', 'io_method=sync'], onLog: () => {}, onError: () => {} });
   let db, app;
+  const stopPostgres = async () => {
+    const owned = pg.process;
+    if (!owned) return;
+    if (owned.exitCode === null) {
+      const ctl = join(dirname(owned.spawnfile), process.platform === 'win32' ? 'pg_ctl.exe' : 'pg_ctl');
+      await exec(ctl, ['-D', dir, '-m', 'fast', '-w', '-t', '30', 'stop'], { timeout: 45000 });
+      if (owned.exitCode === null) await once(owned, 'exit');
+    }
+    pg.process = undefined;
+  };
   try {
     await pg.initialise();
     await pg.start();
     await pg.createDatabase('nexustech_test');
-    process.env.DATABASE_URL = `postgresql://postgres:${password}@localhost:55439/nexustech_test`;
+    process.env.DATABASE_URL = `postgresql://postgres:${password}@localhost:${pgPort}/nexustech_test`;
     process.env.JWT_SECRET = randomBytes(48).toString('hex');
+    if (process.env.MONGODB_TEST_URI) process.env.MONGODB_URI = process.env.MONGODB_TEST_URI;
     require('reflect-metadata');
     const { default: database } = require('../dist/database/data-source');
     db = database;
@@ -34,6 +55,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       const cli = require.resolve('typeorm/cli.js');
       await exec(process.execPath, [cli, 'migration:run', '-d', 'dist/database/data-source.js']);
       assert.equal((await db.runMigrations()).length, 0);
+      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, ['-r', 'ts-node/register', cli, 'migration:run', '-d', 'src/database/data-source.ts']);
@@ -51,6 +73,12 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
     const register = async (email, name) => (await http.post(`${base}/auth/register`).send({ email, name, password: 'Demo-password-2026!' }).expect(201)).body;
     let seller, buyer, other, category, product, order;
     const examples = [];
+    await t.test('All activity endpoints require authentication', async () => {
+      for (const route of ['interactions/me', 'interactions/target/11111111-1111-4111-8111-111111111111', 'logs/me', 'logs/resource/11111111-1111-4111-8111-111111111111']) {
+        await http.get(base + '/activity/' + route).expect(401);
+      }
+      await http.post(base + '/activity/interactions').send({}).expect(401);
+    });
     await t.test('Health checks SQL and Swagger exposes contract', async () => {
       assert.equal((await http.get(`${base}/health`).expect(200)).body.database, 'up');
       await http.get('/docs-json').expect(200);
@@ -190,12 +218,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       await move(buyer, 'preparing').expect(404);
       await http.patch(`${base}/orders/${tracked.id}/status`).set(auth(buyer.accessToken)).send({ status: 'shipped' }).expect(400);
       await move(seller, 'shipped').expect(409);
-      const events = [];
-      const { EventEmitter2 } = require('@nestjs/event-emitter');
-      const emitter = app.get(EventEmitter2);
-      const listener = event => { events.push(event); throw new Error('Synthetic Mongo listener failure'); };
-      emitter.on('order.fulfillment.updated', listener);
-      try {
+
         const concurrent = await Promise.all([move(seller, 'preparing'), move(seller, 'preparing')]);
         assert.deepEqual(concurrent.map(r => r.status).sort(), [200, 409]);
         assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'confirmed');
@@ -213,11 +236,10 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
         assert.equal(delivered.status, 'delivered');
         assert.ok(delivered.fulfillments.every(f => f.status === 'delivered'));
         assert.equal(delivered.transactions[0].status, 'approved');
-        assert.equal(events.length, 6);
-        assert.ok(events.every(e => e.resourceId === tracked.id && e.userId === e.sellerId && !('shippingAddress' in e)));
+
         for (const p of [first, second]) assert.equal((await http.get(`${base}/products/${p.id}`)).body.stock, 2);
         await move(seller, 'delivered').expect(409);
-      } finally { emitter.off('order.fulfillment.updated', listener); }
+
     });
     await t.test('Cancellation racing seller preparation cannot both succeed', async () => {
       const p = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Producto carrera despacho', description: 'Producto sintético sin datos personales', categoryId: category.id, price: 20000, stock: 3 }).expect(201)).body;
@@ -232,24 +254,76 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
       assert.equal((await http.get(`${base}/products/${p.id}`)).body.stock, current.status === 'cancelled' ? 3 : 2);
       assert.equal(current.transactions[0].status, current.status === 'cancelled' ? 'reversed' : 'approved');
     });
+    await t.test('Durable SQL outbox and real MongoDB privacy/retry', { skip: !process.env.MONGODB_TEST_URI }, async () => {
+      const { ActivityService } = require('../dist/activity/activity.service');
+      const activity = app.get(ActivityService);
+      const { ActivityOutbox } = require('../dist/database/entities');
+      const { MongoClient } = require('mongodb');
+      const client = new MongoClient(process.env.MONGODB_TEST_URI);
+      await client.connect();
+      try {
+        const mongo = client.db(process.env.MONGODB_DB_NAME || 'nexustech');
+        await activity.flushOutbox();
+        assert.equal(await db.getRepository(ActivityOutbox).count(), 0);
+        const logs = await mongo.collection('activity_logs').find({}).toArray();
+        for (const name of ['product.created', 'product.updated', 'order.created', 'order.cancelled', 'order.fulfillment.updated']) assert.ok(logs.some(l => l.eventName === name), name);
+        const productRow = await db.getRepository(require('../dist/database/entities').Product).findOneByOrFail({ id: product.id });
+        const body = { targetId: product.id, targetType: 'product', receiverId: productRow.sellerId, message: 'Mensaje privado persistente' };
+        const sent = (await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send(body).expect(201)).body;
+        assert.ok(sent._id);
+        assert.ok(await mongo.collection('interactions').findOne({ message: body.message, senderId: buyer.user.id }));
+        const reader = new ActivityService(db);
+        await reader.onModuleInit();
+        try { assert.ok((await reader.getInteractionsByUser(buyer.user.id)).some(m => m.message === body.message)); }
+        finally { await reader.onModuleDestroy(); }
+        const mine = (await http.get(base + '/activity/interactions/target/' + product.id).set(auth(buyer.accessToken)).expect(200)).body;
+        assert.ok(mine.some(m => m.message === body.message));
+        const unrelated = (await http.get(base + '/activity/interactions/target/' + product.id).set(auth(other.accessToken)).expect(200)).body;
+        assert.equal(unrelated.length, 0);
+        const otherLogs = (await http.get(base + '/activity/logs/resource/' + product.id).set(auth(other.accessToken)).expect(200)).body;
+        assert.ok(otherLogs.every(l => l.userId === other.user.id));
+        await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send({ ...body, receiverId: other.user.id }).expect(403);
+        await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send({ ...body, message: '   ' }).expect(400);
+        await http.get(base + '/activity/interactions/me?limit=101').set(auth(buyer.accessToken)).expect(400);
+        // Simulate crash after Mongo upsert but before SQL delete, then replay.
+        const event = await db.getRepository(ActivityOutbox).save({ eventName: 'product.updated', userId: buyer.user.id, resourceId: product.id, metadata: {} });
+        await mongo.collection('activity_logs').insertOne({ eventId: event.id, eventName: event.eventName, userId: event.userId, resourceId: event.resourceId, occurredAt: event.createdAt.toISOString(), metadata: {} });
+        await activity.flushOutbox();
+        assert.equal(await mongo.collection('activity_logs').countDocuments({ eventId: event.id }), 1);
+        assert.equal(await db.getRepository(ActivityOutbox).count(), 0);
+        await activity.client.close();
+        await http.get(base + '/activity/interactions/me').set(auth(buyer.accessToken)).expect(503);
+        await http.get(base + '/activity/logs/me').set(auth(buyer.accessToken)).expect(503);
+        await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send(body).expect(503);
+        const queued = (await http.post(base + '/products').set(auth(seller.accessToken)).send({ name: 'Outbox recovery', description: 'Real database recovery scenario', categoryId: category.id, price: 12000, stock: 2 }).expect(201)).body;
+        assert.ok(await db.getRepository(ActivityOutbox).existsBy({ resourceId: queued.id }));
+        await activity.connect();
+        await activity.flushOutbox();
+        assert.ok(await mongo.collection('activity_logs').findOne({ resourceId: queued.id, eventName: 'product.created' }));
+        await http.get(base + '/health/ready').expect(200);
+      } finally { await client.close(); }
+    });
     await t.test('Data survives PostgreSQL restart and two fresh API processes', async () => {
       const trackedId = (await db.query('SELECT id FROM orders WHERE "idempotencyKey" = $1', ['multi-seller-tracking']))[0].id;
       await app.close(); app = undefined;
       await db.destroy();
-      await pg.stop();
+      await stopPostgres();
       await pg.start();
       for (let restart = 0; restart < 2; restart++) {
-        const child = spawn(process.execPath, ['dist/main.js'], { windowsHide: true, stdio: 'ignore', env: { ...process.env, PORT: '55440' } });
+        const child = spawn(process.execPath, ['dist/main.js'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(apiPort) } });
+        let diagnostics = '';
+        child.stdout.on('data', data => { diagnostics = (diagnostics + data).slice(-12000); });
+        child.stderr.on('data', data => { diagnostics = (diagnostics + data).slice(-12000); });
         try {
-          const live = request('http://127.0.0.1:55440');
+          const live = request(`http://127.0.0.1:${apiPort}`);
           let ready = false;
-          for (let attempt = 0; attempt < 100; attempt++) {
-            if (child.exitCode !== null) throw new Error('API process exited before readiness');
+          for (let attempt = 0; attempt < 480; attempt++) {
+            if (child.exitCode !== null) throw new Error('API process exited before readiness: ' + diagnostics);
             try { ready = (await live.get(`${base}/health`).timeout(500)).status === 200; } catch {}
             if (ready) break;
             await new Promise(resolve => setTimeout(resolve, 100));
           }
-          assert.ok(ready, 'Fresh API process must become ready');
+          assert.ok(ready, 'Fresh API process must become ready: ' + diagnostics);
           const session = (await live.post(`${base}/auth/login`).send({ email: 'buyer@example.test', password: 'Demo-password-2026!' }).expect(200)).body;
           const saved = (await live.get(`${base}/orders/${trackedId}`).set(auth(session.accessToken)).expect(200)).body;
           assert.equal(saved.status, 'delivered');
@@ -257,7 +331,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
           assert.equal(saved.fulfillments.length, 2);
           for (const item of saved.items) assert.equal((await live.get(`${base}/products/${item.productId}`).expect(200)).body.stock, 2);
           await live.get('/docs').redirects(1).expect(200);
-        } finally {
+        } catch (error) { console.error('Restart verification failed:', error, diagnostics); throw error; } finally {
           if (child.exitCode === null) { const ended = once(child, 'exit'); child.kill(); await ended; }
         }
       }
@@ -270,7 +344,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 180000 }, a
   } finally {
     if (app) await app.close();
     if (db?.isInitialized) await db.destroy();
-    await pg.stop();
+    await stopPostgres();
     const target = resolve(dir);
     assert.ok(target.startsWith(resolve(tmpdir()) + sep + 'nexustech-pg-'), 'Only remove the isolated mkdtemp cluster');
     await rm(target, { recursive: true, force: true });

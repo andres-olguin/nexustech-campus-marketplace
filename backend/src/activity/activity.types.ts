@@ -1,5 +1,8 @@
+import { ObjectId } from 'mongodb';
+
 export interface ActivityLogDocument {
-  _id?: any;
+  _id?: ObjectId;
+  eventId?: string;
   eventName: string;
   userId: string;
   resourceId: string;
@@ -8,16 +11,16 @@ export interface ActivityLogDocument {
     sellerId?: string;
     status?: string;
     orderStatus?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
 export interface InteractionDocument {
-  _id?: any;
+  _id?: ObjectId;
   targetId: string; // ID del producto o pedido
   targetType: 'product' | 'order';
   senderId: string; // ID del comprador o vendedor
-  receiverId?: string;
+  receiverId: string;
   message: string;
   createdAt: string;
 }

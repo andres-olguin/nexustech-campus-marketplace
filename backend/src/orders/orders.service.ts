@@ -38,9 +38,10 @@ export class OrdersService {
       }
       await em.save(SimulatedTransaction, em.create(SimulatedTransaction, { orderId: order.id, amount: total, provider: 'simulation', status: 'approved' }));
       await em.delete(CartItem, { userId });
+      await this.events.enqueue(em, 'order.created', userId, order.id);
       return { order: await this.details(em, order), created: true };
     });
-    if (result.created) this.events.publish('order.created', userId, result.order.id);
+
     return result.order;
   }
   async list(userId: string, q: PageQuery) {
@@ -70,9 +71,10 @@ export class OrdersService {
       await em.save(Order, order);
       await em.update(OrderFulfillment, { orderId: id }, { status: 'cancelled' });
       await em.update(SimulatedTransaction, { orderId: id }, { status: 'reversed' });
+      await this.events.enqueue(em, 'order.cancelled', userId, id);
       return this.details(em, order);
     });
-    this.events.publish('order.cancelled', userId, id);
+
     return result;
   }
   async sellerOrders(sellerId: string, q: PageQuery) {
@@ -98,9 +100,10 @@ export class OrdersService {
       const progress: OrderStatus[] = ['confirmed', 'preparing', 'shipped', 'delivered'];
       order.status = progress[Math.min(...segments.map(f => progress.indexOf(f.status)))];
       await em.save(Order, order);
+      await this.events.enqueue(em, 'order.fulfillment.updated', sellerId, id, { sellerId, status: dto.status, orderStatus: order.status });
       return this.sellerDetails(em, order, sellerId);
     });
-    this.events.publish('order.fulfillment.updated', sellerId, id, { sellerId, status: dto.status, orderStatus: result.orderStatus });
+
     return result;
   }
   private async sellerDetails(em: EntityManager, order: Order, sellerId: string) {

@@ -87,7 +87,18 @@ const cartItem = (value) =>
 const favorite = (value) =>
   baseRecord(value) && uuid(value.userId) && uuid(value.productId);
 
+const mongoId = value => typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
+const isoDate = value => string(value) && !Number.isNaN(Date.parse(value));
+const interaction = value => value && mongoId(value._id) && uuid(value.targetId) &&
+  ["product", "order"].includes(value.targetType) && uuid(value.senderId) &&
+  (value.receiverId === undefined || uuid(value.receiverId)) && string(value.message) && isoDate(value.createdAt);
+const activityLog = value => value && mongoId(value._id) && string(value.eventName) &&
+  uuid(value.userId) && uuid(value.resourceId) && isoDate(value.occurredAt);
+
 export const schemas = {
+  interaction,
+  interactions: array(interaction),
+  activityLogs: array(activityLog),
   session: (value) =>
     value &&
     string(value.accessToken) &&
@@ -376,25 +387,31 @@ export function createApiClient({
         method: "POST",
         secure: true,
         body: { targetId, targetType, message, receiverId },
+        schema: schemas.interaction,
       }),
     targetInteractions: (targetId, signal) =>
       request("/activity/interactions/target/" + id(targetId), {
+        secure: true,
         signal,
+        schema: schemas.interactions,
       }),
     myInteractions: (signal) =>
       request("/activity/interactions/me", {
         secure: true,
         signal,
+        schema: schemas.interactions,
       }),
     resourceLogs: (resourceId, signal) =>
       request("/activity/logs/resource/" + id(resourceId), {
         secure: true,
         signal,
+        schema: schemas.activityLogs,
       }),
     myLogs: (signal) =>
       request("/activity/logs/me", {
         secure: true,
         signal,
+        schema: schemas.activityLogs,
       }),
   };
 }

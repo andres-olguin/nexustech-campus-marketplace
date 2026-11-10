@@ -1,14 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-/** Best effort after commit: Mongo listeners cannot roll back SQL. */
+import { Injectable } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
+import { ActivityOutbox } from '../database/entities';
+/** Call inside the same SQL transaction as the business mutation. */
 @Injectable()
 export class ActivityEvents {
-  private readonly logger = new Logger(ActivityEvents.name);
-  constructor(private readonly events: EventEmitter2) {}
-  publish(name: string, userId: string, resourceId: string, details?: { sellerId: string; status: string; orderStatus: string }) {
-    try {
-      void this.events.emitAsync(name, { userId, resourceId, occurredAt: new Date().toISOString(), ...details })
-        .catch(() => this.logger.warn(`Activity listener failed: ${name}`));
-    } catch { this.logger.warn(`Activity listener failed: ${name}`); }
+  async enqueue(em: EntityManager, eventName: string, userId: string, resourceId: string, metadata: Record<string, unknown> = {}) {
+    await em.save(ActivityOutbox, em.create(ActivityOutbox, { eventName, userId, resourceId, metadata }));
   }
 }

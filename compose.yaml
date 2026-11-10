@@ -17,6 +17,14 @@ services:
 
   mongo:
     image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: nexustech
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set MONGO_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u nexustech -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
     volumes:
       - mongo_data:/data/db
 
@@ -31,14 +39,20 @@ services:
       DATABASE_USER: nexustech
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_NAME: nexustech
-      MONGODB_URI: mongodb://mongo:27017/nexustech
+      MONGODB_URI: mongodb://nexustech:${MONGO_PASSWORD}@mongo:27017/nexustech?authSource=admin
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
     ports:
       - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
       mongo:
-        condition: service_started
+        condition: service_healthy
 
   web:
     build: ./nexustech-react
@@ -46,8 +60,14 @@ services:
       VITE_API_BASE_URL: http://localhost:3001/api/v1
     ports:
       - "5173:5173"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:

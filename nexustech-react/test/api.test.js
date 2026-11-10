@@ -106,3 +106,22 @@ test("External abort remains AbortError instead of showing service failure", asy
     (e) => e.name === "AbortError",
   );
 });
+
+test("Activity contract validates real Mongo documents and sends Bearer credentials", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const doc = { _id: "a".repeat(24), targetId: id, targetType: "product", senderId: id, receiverId: id, message: "Consulta", createdAt: new Date().toISOString() };
+  let sent;
+  const api = createApiClient({ fetchImpl: async (url, options) => {
+    sent = { url, ...options };
+    return json(options.method === "POST" ? doc : [doc], options.method === "POST" ? 201 : 200);
+  } });
+  api.setToken("signed.jwt.token");
+  assert.deepEqual(await api.targetInteractions(id), [doc]);
+  assert.equal(sent.headers.Authorization, "Bearer signed.jwt.token");
+  assert.deepEqual(await api.createInteraction(doc), doc);
+  assert.equal(JSON.parse(sent.body).receiverId, id);
+  assert.equal(schemas.interactions([{ ...doc, _id: undefined }]), false);
+  const malformed = createApiClient({ fetchImpl: async () => json({ success: true }) });
+  malformed.setToken("signed.jwt.token");
+  await assert.rejects(malformed.myInteractions(), /incompatible/);
+});

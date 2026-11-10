@@ -83,4 +83,11 @@ export class SimulatedTransaction extends RecordEntity {
   @Column({ default: 'simulation' }) provider!: string;
   @Column({ type: 'bigint', transformer: { to: (v: number) => v, from: (v: string) => Number(v) } }) amount!: number;
 }
-export const entities = [User, BuyerProfile, SellerProfile, Category, Product, CartItem, Favorite, Order, OrderItem, OrderFulfillment, SimulatedTransaction];
+@Entity('activity_outbox')
+export class ActivityOutbox extends RecordEntity {
+  @Column() eventName!: string;
+  @Column({ type: 'uuid' }) userId!: string;
+  @Column({ type: 'uuid' }) resourceId!: string;
+  @Column({ type: 'jsonb', default: {} }) metadata!: Record<string, unknown>;
+}
+export const entities = [ActivityOutbox, User, BuyerProfile, SellerProfile, Category, Product, CartItem, Favorite, Order, OrderItem, OrderFulfillment, SimulatedTransaction];

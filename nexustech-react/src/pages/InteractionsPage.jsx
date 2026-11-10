@@ -8,6 +8,7 @@ export default function InteractionsPage({ shop }) {
   const [activeTab, setActiveTab] = useState("logs"); // 'logs' | 'messages'
   const [targetId, setTargetId] = useState("");
   const [targetType, setTargetType] = useState("product");
+  const [receiverId, setReceiverId] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState(null);
@@ -34,12 +35,13 @@ export default function InteractionsPage({ shop }) {
       await shop.api.createInteraction({
         targetId: targetId.trim(),
         targetType,
+        receiverId: receiverId.trim(),
         message: message.trim(),
       });
       setSendResult({ tone: "success", text: "Mensaje de interacción persistido exitosamente en MongoDB." });
       setMessage("");
       setTargetId("");
-      shop.act(() => Promise.resolve()); // disparar recarga
+      shop.refresh(); // disparar recarga
     } catch (err) {
       setSendResult({ tone: "error", text: err.message || "Error al registrar interacción." });
     } finally {
@@ -56,7 +58,7 @@ export default function InteractionsPage({ shop }) {
         </header>
         <Alert tone="warning" title="Inicio de sesión requerido">
           Debes iniciar sesión para consultar tu historial de auditoría y tus conversaciones en MongoDB.
-          Ve a <a href="#/login">Iniciar Sesión</a>.
+          Ve a <a href="#/acceso">Iniciar Sesión</a>.
         </Alert>
       </section>
     );
@@ -170,6 +172,10 @@ export default function InteractionsPage({ shop }) {
                       onChange={(e) => setTargetId(e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="col-12">
+                    <label htmlFor="receiver-id" className="form-label small">UUID del destinatario</label>
+                    <input id="receiver-id" className="form-control" value={receiverId} onChange={e => setReceiverId(e.target.value)} required />
                   </div>
                   <div className="col-12">
                     <label className="form-label small">Mensaje o consulta</label>

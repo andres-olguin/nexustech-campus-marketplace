@@ -6,6 +6,8 @@ import { ActivityService } from './activity.service';
 
 @ApiTags('activity')
 @Controller('activity')
+@UseGuards(AuthGuard)
+@ApiBearerAuth()
 export class ActivityController {
   constructor(private readonly activity: ActivityService) {}
 
@@ -23,10 +25,11 @@ export class ActivityController {
   @Get('interactions/target/:targetId')
   @ApiOperation({ summary: 'Consultar el historial de interacciones de un producto o pedido (MongoDB)' })
   getInteractionsByTarget(
+    @CurrentUser() userId: string,
     @Param('targetId', ParseUUIDPipe) targetId: string,
     @Query() q: ActivityLimitQuery,
   ) {
-    return this.activity.getInteractionsByTarget(targetId, q.limit);
+    return this.activity.getInteractionsByTarget(targetId, userId, q.limit);
   }
 
   @Get('interactions/me')
@@ -45,10 +48,11 @@ export class ActivityController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Consultar eventos de auditoría y trazabilidad de un recurso (MongoDB)' })
   getResourceLogs(
+    @CurrentUser() userId: string,
     @Param('resourceId', ParseUUIDPipe) resourceId: string,
     @Query() q: ActivityLimitQuery,
   ) {
-    return this.activity.getActivityLogs(resourceId, q.limit);
+    return this.activity.getActivityLogs(resourceId, userId, q.limit);
   }
 
   @Get('logs/me')

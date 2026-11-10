@@ -6,7 +6,7 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
   use: {
-    baseURL: "http://127.0.0.1:5178",
+    baseURL: process.env.TEST_UI_URL || "http://127.0.0.1:5178",
     channel: process.env.PW_BROWSER_CHANNEL || undefined,
     viewport: { width: 1440, height: 1000 },
     screenshot: "only-on-failure",
