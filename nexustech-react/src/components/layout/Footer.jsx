@@ -1,4 +1,4 @@
-import unabLogo from "../../assets/images/logos/logo-unab.png";
+import unabIsotipo from "../../assets/images/logos/isotipo-unab.png";
 import mastertechLogo from "../../assets/images/logos/logo-mastertech.png";
 import Icon from "../ui/Icon.jsx";
 
@@ -33,12 +33,18 @@ export default function Footer() {
         <div className="nt-footer-col nt-footer-academic">
           <span className="nt-footer-heading">PROYECTO ACADÉMICO</span>
           <div className="nt-unab-card">
-            <div className="nt-unab-logo-box">
-              <img
-                src={unabLogo}
-                alt="Universidad Andrés Bello"
-                className="nt-unab-footer-logo"
-              />
+            <div className="nt-unab-header">
+              <div className="nt-unab-logo-box">
+                <img
+                  src={unabIsotipo}
+                  alt="Escudo Universidad Andrés Bello"
+                  className="nt-unab-footer-logo"
+                />
+              </div>
+              <div>
+                <strong>Universidad Andrés Bello</strong>
+                <small>Proyecto Académico</small>
+              </div>
             </div>
             <p>
               Desarrollado para la asignatura <strong>Taller de Integración 3</strong>.
