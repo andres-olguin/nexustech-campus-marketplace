@@ -86,6 +86,17 @@ const cartItem = (value) =>
   value.quantity > 0;
 const favorite = (value) =>
   baseRecord(value) && uuid(value.userId) && uuid(value.productId);
+const review = (value) =>
+  baseRecord(value) &&
+  uuid(value.productId) &&
+  uuid(value.userId) &&
+  integer(value.rating) &&
+  value.rating >= 1 &&
+  value.rating <= 5 &&
+  string(value.comment) &&
+  (value.title === undefined || value.title === null || string(value.title)) &&
+  (value.userName === undefined || value.userName === null || string(value.userName)) &&
+  (value.featuresEvaluated === undefined || array(string)(value.featuresEvaluated));
 
 const mongoId = value => typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
 const isoDate = value => string(value) && !Number.isNaN(Date.parse(value));
@@ -126,6 +137,8 @@ export const schemas = {
     array((i) => cartItem(i) && product(i.product))(value.items),
   favorite,
   favorites: page((i) => favorite(i) && product(i.product)),
+  review,
+  reviews: page(review),
   deleted: (value) => value?.deleted === true,
 };
 const labels = {
@@ -412,6 +425,18 @@ export function createApiClient({
         secure: true,
         signal,
         schema: schemas.activityLogs,
+      }),
+    reviews: (productId, page = 1, signal) =>
+      request(`/products/${id(productId)}/reviews?page=${page}&limit=5`, {
+        signal,
+        schema: schemas.reviews,
+      }),
+    createReview: (productId, { rating, title, comment, featuresEvaluated }) =>
+      request(`/products/${id(productId)}/reviews`, {
+        method: "POST",
+        secure: true,
+        body: { rating, title, comment, featuresEvaluated },
+        schema: schemas.review,
       }),
   };
 }

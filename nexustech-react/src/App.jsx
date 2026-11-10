@@ -56,9 +56,13 @@ export default function App() {
   useEffect(() => {
     if (!shop.session) setDialog(null);
   }, [shop.session]);
-  async function detail(id) {
+  async function detail(target) {
+    if (target && typeof target === "object" && target.isDemo) {
+      open({ type: "detail", product: target });
+      return;
+    }
     try {
-      const product = await shop.api.product(id);
+      const product = await shop.api.product(target);
       open({ type: "detail", product });
     } catch (error) {
       shop.setNotice({ tone: "error", message: error.message });

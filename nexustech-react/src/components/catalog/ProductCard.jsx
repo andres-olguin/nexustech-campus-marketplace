@@ -16,6 +16,9 @@ export default function ProductCard({
   own,
   busy,
 }) {
+  const isDemo = Boolean(p.isDemo);
+  const detailTarget = isDemo ? p : p.id;
+
   const stockClass =
     p.stock > 3
       ? "nt-stock-available"
@@ -35,29 +38,47 @@ export default function ProductCard({
       <div className="nt-product-photo">
         <button
           className="nt-photo-button"
-          onClick={() => onDetail(p.id)}
+          onClick={() => onDetail(detailTarget)}
           aria-label={"Ver detalle de " + p.name}
         >
           <ProductImage src={p.imageUrl} alt={p.name} loading="lazy" />
         </button>
         <span className={"nt-photo-label" + (!p.isActive ? " is-archived" : "")}>
-          {p.isActive ? "CAMPUS UNAB" : "ARCHIVADO"}
+          {isDemo
+            ? "DEMO · VIÑA DEL MAR"
+            : p.isActive
+              ? "VIÑA DEL MAR"
+              : "ARCHIVADO"}
         </span>
-        <div className="nt-product-tools">
-          <Button
-            variant="ghost"
-            className={"nt-icon-button nt-fav-button" + (favorite ? " is-active" : "")}
-            aria-label={
-              (favorite ? "Quitar de favoritos: " : "Guardar en favoritos: ") +
-              p.name
+        {p.condition && (
+          <span
+            className={
+              "nt-condition-pill" +
+              (p.condition === "Nuevo" ? " is-new" : " is-used")
             }
-            aria-pressed={favorite}
-            disabled={busy}
-            onClick={() => onFavorite(p.id)}
           >
-            <Icon name="heart" filled={favorite} />
-          </Button>
-          {own && (
+            {p.condition}
+          </span>
+        )}
+        <div className="nt-product-tools">
+          {!isDemo && (
+            <Button
+              variant="ghost"
+              className={
+                "nt-icon-button nt-fav-button" + (favorite ? " is-active" : "")
+              }
+              aria-label={
+                (favorite ? "Quitar de favoritos: " : "Guardar en favoritos: ") +
+                p.name
+              }
+              aria-pressed={favorite}
+              disabled={busy}
+              onClick={() => onFavorite(p.id)}
+            >
+              <Icon name="heart" filled={favorite} />
+            </Button>
+          )}
+          {own && !isDemo && (
             <>
               <Button
                 variant="ghost"
@@ -82,18 +103,20 @@ export default function ProductCard({
 
       <div className="nt-product-body">
         <div className="nt-card-meta">
-          <Badge variant="muted">{category || "General"}</Badge>
-          <span className={"nt-stock-tag " + stockClass}>
-            {stockLabel}
-          </span>
+          <Badge variant="muted">{category || p.category || "General"}</Badge>
+          <span className={"nt-stock-tag " + stockClass}>{stockLabel}</span>
         </div>
 
         <h3 className="nt-card-title">
-          <button onClick={() => onDetail(p.id)}>{p.name}</button>
+          <button onClick={() => onDetail(detailTarget)}>{p.name}</button>
         </h3>
 
         <p className="nt-product-seller">
-          {own ? "Tu publicación propia" : "Vendedor estudiante · " + p.sellerId.slice(0, 8)}
+          {isDemo
+            ? p.sellerLabel || "Catálogo de demostración"
+            : own
+              ? "Tu publicación propia"
+              : "Vendedor estudiante · " + p.sellerId.slice(0, 8)}
         </p>
 
         <div className="nt-product-price">
@@ -102,17 +125,27 @@ export default function ProductCard({
         </div>
 
         <div className="nt-product-buttons">
-          <Button variant="secondary" onClick={() => onDetail(p.id)}>
+          <Button variant="secondary" onClick={() => onDetail(detailTarget)}>
             Ver detalle
           </Button>
-          <Button
-            icon="plus"
-            disabled={busy || own || !p.isActive || p.stock < 1}
-            onClick={() => onAdd(p.id)}
-            aria-label={"Agregar al carrito: " + p.name}
-          >
-            {own ? "Propio" : p.stock ? "Agregar" : "Agotado"}
-          </Button>
+          {isDemo ? (
+            <Button
+              variant="ghost"
+              onClick={() => onDetail(detailTarget)}
+              aria-label={"Ver reseñas y especificaciones de " + p.name}
+            >
+              Ver reseñas
+            </Button>
+          ) : (
+            <Button
+              icon="plus"
+              disabled={busy || own || !p.isActive || p.stock < 1}
+              onClick={() => onAdd(p.id)}
+              aria-label={"Agregar al carrito: " + p.name}
+            >
+              {own ? "Propio" : p.stock ? "Agregar" : "Agotado"}
+            </Button>
+          )}
         </div>
       </div>
     </article>

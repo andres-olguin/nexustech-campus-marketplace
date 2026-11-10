@@ -37,23 +37,21 @@ export default function Footer() {
               <div className="nt-unab-logo-box">
                 <img
                   src={unabIsotipo}
-                  alt="Escudo Universidad Andrés Bello"
+                  alt="Isotipo Universidad Andrés Bello"
                   className="nt-unab-footer-logo"
                 />
               </div>
               <div>
                 <strong>Universidad Andrés Bello</strong>
-                <small>Proyecto Académico</small>
+                <small>Proyecto Académico Estudiantil</small>
               </div>
             </div>
             <p>
-              Desarrollado para la asignatura <strong>Taller de Integración 3</strong>.
-              Escuela de Tecnologías de la Información, Facultad de Ingeniería.
+              Desarrollado para la asignatura <strong>Desarrollo Web y Móvil · Hito 3</strong>.
+              Prototipo universitario sin afiliación ni carácter de plataforma institucional oficial.
             </p>
             <div className="nt-campus-badges">
-              <span>Sede Santiago</span>
-              <span>Sede Viña del Mar</span>
-              <span>Sede Concepción</span>
+              <span>UNAB · Sede Viña del Mar</span>
             </div>
           </div>
         </div>
@@ -101,7 +99,7 @@ export default function Footer() {
           <a href="#/contacto">Contacto</a>
         </div>
         <small className="nt-footer-copy">
-          NexusTech © 2026 · Proyecto académico Universidad Andrés Bello.
+          NexusTech © 2026 · Proyecto académico estudiantil · UNAB Sede Viña del Mar.
         </small>
       </div>
     </footer>

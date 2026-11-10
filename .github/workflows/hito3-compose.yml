@@ -30,8 +30,12 @@ jobs:
         run: docker compose --env-file .env.ci up -d --build --wait --wait-timeout 240
       - name: Migraciones, privacidad, concurrencia, caida Mongo y persistencia
         run: node scripts/hito3-compose-smoke.cjs
-      - name: Contrato HTTP React
-        run: docker compose --env-file .env.ci exec -T web npm test
+      - name: Build y contrato HTTP React con fixture canonico
+        run: |
+          docker compose --env-file .env.ci exec -T web mkdir -p /backend/docs
+          docker compose --env-file .env.ci cp backend/docs/HTTP_EXAMPLES.json web:/backend/docs/HTTP_EXAMPLES.json
+          docker compose --env-file .env.ci exec -T web npm run build
+          docker compose --env-file .env.ci exec -T web npm test
       - name: Estado y diagnostico
         if: always()
         run: |
