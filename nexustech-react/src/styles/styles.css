@@ -2427,3 +2427,11 @@ html:has(dialog.nt-dialog[open]) {
     padding-bottom: 14px;
   }
 }
+
+/* Engineering QA: keep checkout/account/menu controls reachable on narrow screens. */
+@media (max-width: 640px) {
+  .nt-nav-shell { flex-wrap: wrap; }
+  .nt-nav-actions { width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; }
+  .nt-ribbon-left, .nt-ribbon-text { min-width: 0; max-width: 100%; }
+  .nt-ribbon-text { flex-wrap: wrap; white-space: normal; }
+}

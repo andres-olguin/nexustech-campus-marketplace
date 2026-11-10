@@ -30,7 +30,10 @@ export function addResponseSchemas(document: OpenAPIObject) {
     SellerOrder: object({ id: uuid, createdAt: date, orderStatus: { type: 'string', enum: ['confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'] }, shippingAddress: text, subtotal: integer, items: array(ref('OrderItem')), fulfillment: ref('OrderFulfillment') }),
     SimulatedTransaction: record({ orderId: uuid, status: { type: 'string', enum: ['approved', 'reversed'] }, provider: { type: 'string', enum: ['simulation'] }, amount: integer }),
     Order: record({ userId: uuid, status: { type: 'string', enum: ['confirmed', 'preparing', 'shipped', 'delivered', 'cancelled'] }, total: integer, shippingAddress: text, idempotencyKey: text, items: array(ref('OrderItem')), transactions: array(ref('SimulatedTransaction')), fulfillments: array(ref('OrderFulfillment')) }),
+    ActivityLog: object({ _id: text, eventName: text, userId: uuid, resourceId: uuid, occurredAt: date }),
+    Interaction: object({ _id: text, targetId: uuid, targetType: { type: 'string', enum: ['product', 'order'] }, senderId: uuid, receiverId: uuid, message: text, createdAt: date }),
     Deleted: object({ deleted: { type: 'boolean', enum: [true] } }),
+    Ready: object({ status: { type: 'string', enum: ['ok'] }, database: { type: 'string', enum: ['up'] }, mongodb: { type: 'string', enum: ['up'] } }),
     Health: object({ status: { type: 'string', enum: ['ok'] }, database: { type: 'string', enum: ['up'] } }),
     ApiError: object({ statusCode: integer, message: { oneOf: [text, array(text)] }, error: text }),
   };
@@ -50,7 +53,9 @@ export function addResponseSchemas(document: OpenAPIObject) {
       else if (path.includes('/favorites')) schema = method === 'get' ? page('FavoriteWithProduct') : ref('Favorite');
       else if (path.includes('/seller/orders')) schema = method === 'get' ? page('SellerOrder') : ref('SellerOrder');
       else if (path.includes('/orders')) schema = path.endsWith('/orders') && method === 'get' ? page('Order') : ref('Order');
-      else schema = ref('Health');
+      else if (path.includes('/activity/interactions')) schema = path.includes('/target/') || path.endsWith('/me') ? array(ref('Interaction')) : ref('Interaction');
+      else if (path.includes('/activity/logs')) schema = array(ref('ActivityLog'));
+      else schema = ref(path.endsWith('/health/ready') ? 'Ready' : 'Health');
       const status = method === 'post' && !path.endsWith('/auth/login') ? '201' : '200';
       operation.responses[status] = { description: 'Operación completada', content: { 'application/json': { schema } } };
       for (const code of ['400', '401', '403', '404', '409', '429', '500', '503']) {

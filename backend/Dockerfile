@@ -3,7 +3,7 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN MONGOMS_DISABLE_POSTINSTALL=1 npm ci
 
 COPY . .
 RUN npm run build

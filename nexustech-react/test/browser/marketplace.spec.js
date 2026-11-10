@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-const ui = "http://127.0.0.1:5178";
+const ui = process.env.TEST_UI_URL || "http://127.0.0.1:5178";
 const api = process.env.TEST_API_URL;
 const password = "Synthetic-browser-2026!";
 async function register(page, email, name) {
@@ -237,9 +237,11 @@ test("Real browser registration → publication/edit → favorites/cart → mult
   const sold = page.getByRole("article").filter({ hasText: order.id });
   await expect(sold).toContainText(firstName);
   await expect(sold).not.toContainText(secondName);
+  const prepared = page.waitForResponse(r => r.url() === api + "/seller/orders/" + order.id + "/status" && r.request().method() === "PATCH");
   await sold
     .getByRole("button", { name: "Marcar: En preparación", exact: true })
     .click();
+  expect((await prepared).status()).toBe(200);
   await buyer
     .getByRole("button", { name: "Actualizar pedidos", exact: true })
     .click();
@@ -262,10 +264,13 @@ test("Real browser registration → publication/edit → favorites/cart → mult
     "En preparación",
     "Despacho declarado",
     "Entrega declarada",
-  ])
+  ]) {
+    const advanced = third.waitForResponse(r => r.url() === api + "/seller/orders/" + order.id + "/status" && r.request().method() === "PATCH");
     await soldB
       .getByRole("button", { name: "Marcar: " + next, exact: true })
       .click();
+    expect((await advanced).status()).toBe(200);
+  }
   await buyer
     .getByRole("button", { name: "Actualizar pedidos", exact: true })
     .click();
@@ -323,7 +328,7 @@ test("Real browser registration → publication/edit → favorites/cart → mult
   expect(invalid.status()).toBe(400);
   await nav(buyer, "historial");
   await expect(
-    buyer.getByText("Historial temporalmente no disponible", { exact: true }),
+    buyer.getByRole("heading", { name: /Historial de actividad/i }),
   ).toBeVisible();
   expect(errors).toEqual([]);
   await buyer.close();
@@ -342,11 +347,13 @@ test("Mobile navigation and responsive layout, 390px and 768px", async ({
       }),
     ).toBeVisible();
     await expect(page.getByText("Cargando publicaciones…")).toHaveCount(0);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
+    const overflow = await page.evaluate(() => ({
+      width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+      elements: [...document.querySelectorAll("body *")].filter(el => {
+        const rect = el.getBoundingClientRect(); return rect.width && (rect.right > innerWidth + 1 || rect.left < -1);
+      }).slice(0, 12).map(el => ({ tag: el.tagName, className: el.className, width: Math.round(el.getBoundingClientRect().width) })),
+    }));
+    expect(overflow.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width);
     await page.screenshot({
       path: `test-results/catalog-${width}.png`,
       fullPage: true,
@@ -489,7 +496,7 @@ test("A 401 clears the session and does not retain authenticated account data", 
   await nav(page, "catalogo");
   await page.getByRole("button", { name: "Actualizar", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Ingresar", exact: true }),
+    page.getByRole("link", { name: /Iniciar sesi.n o registrarse/ }),
   ).toBeVisible();
   await nav(page, "rastreo");
   await expect(
@@ -521,4 +528,31 @@ test("Unavailable and incompatible API responses never show a fallback catalog",
     ),
   ).toBeVisible();
   await expect(page.locator(".nt-product-card")).toHaveCount(0);
+});
+
+test("React sends private messages to real MongoDB and reads them after reload", async ({ page, request }) => {
+  const run = randomUUID().slice(0, 8);
+  const seller = await (await request.post(api + "/auth/register", { data: { email: "mongo-seller-" + run + "@example.test", name: "Mongo Seller", password } })).json();
+  const headers = { Authorization: "Bearer " + seller.accessToken };
+  const category = await (await request.post(api + "/categories", { headers, data: { name: "Mongo " + run } })).json();
+  const product = await (await request.post(api + "/products", { headers, data: { name: "Mongo product " + run, description: "Real Mongo browser integration", categoryId: category.id, price: 15000, stock: 2 } })).json();
+  await register(page, "mongo-buyer-" + run + "@example.test", "Mongo Buyer");
+  await nav(page, "historial");
+  await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
+  await page.locator("form input").first().fill(product.id);
+  await page.getByLabel("UUID del destinatario").fill(seller.user.id);
+  const message = "Pregunta persistente " + run;
+  await page.locator("form textarea").fill(message);
+  const saved = page.waitForResponse(r => r.url() === api + "/activity/interactions" && r.request().method() === "POST");
+  await page.locator("form button[type=submit]").click();
+  const response = await saved;
+  expect(response.status()).toBe(201);
+  expect((await response.json())._id).toMatch(/^[a-f0-9]{24}$/i);
+  await expect(page.getByText(message, { exact: true })).toBeVisible();
+  await page.reload();
+  // Session tokens intentionally live only in memory: authenticate again after reload.
+  await login(page, "mongo-buyer-" + run + "@example.test");
+  await nav(page, "historial");
+  await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
+  await expect(page.getByText(message, { exact: true })).toBeVisible();
 });

@@ -1,0 +1,51 @@
+name: Hito 3 - Compose real
+on:
+  push:
+    branches: [feat/hito3-codex-cli-mongo-qa]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: hito3-compose-technical
+  cancel-in-progress: true
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: nexustech-hito3-ci
+    steps:
+      - name: Obtener exactamente el commit del evento (repositorio publico)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          git fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Credenciales efimeras de prueba
+        run: node scripts/hito3-compose-smoke.cjs prepare
+      - name: Construir y esperar cuatro servicios saludables
+        run: docker compose --env-file .env.ci up -d --build --wait --wait-timeout 240
+      - name: Migraciones, privacidad, concurrencia, caida Mongo y persistencia
+        run: node scripts/hito3-compose-smoke.cjs
+      - name: Build y contrato HTTP React con fixture canonico
+        run: |
+          docker compose --env-file .env.ci exec -T web mkdir -p /backend/docs
+          docker compose --env-file .env.ci cp backend/docs/HTTP_EXAMPLES.json web:/backend/docs/HTTP_EXAMPLES.json
+          docker compose --env-file .env.ci exec -T web npm run build
+          docker compose --env-file .env.ci exec -T web npm test
+      - name: Estado y diagnostico
+        if: always()
+        run: |
+          docker compose --env-file .env.ci ps -a
+          docker compose --env-file .env.ci logs --no-color --tail=80 api web postgres mongo
+      - name: Retirar solo volumenes efimeros de este runner
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CI" = "true"
+          test "$COMPOSE_PROJECT_NAME" = "nexustech-hito3-ci"
+          docker compose --env-file .env.ci down --volumes --remove-orphans

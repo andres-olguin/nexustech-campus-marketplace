@@ -18,6 +18,8 @@ import { OrdersService } from './orders/orders.service';
 import { OrdersController, SellerOrdersController } from './orders/orders.controller';
 import { HealthController } from './health.controller';
 import { ActivityEvents } from './common/activity-events';
+import { ActivityModule } from './activity/activity.module';
+import { ActivityController } from './activity/activity.controller';
 
 @Module({
   imports: [
@@ -29,9 +31,9 @@ import { ActivityEvents } from './common/activity-events';
     } }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     EventEmitterModule.forRoot(),
-    // Integration point: import ActivityModule here when the MongoDB agent delivers it.
+    ActivityModule,
   ],
-  controllers: [AuthController, CategoriesController, ProductsController, PublicationsController, UsersController, CartController, FavoritesController, OrdersController, SellerOrdersController, HealthController],
+  controllers: [AuthController, CategoriesController, ProductsController, PublicationsController, UsersController, CartController, FavoritesController, OrdersController, SellerOrdersController, ActivityController, HealthController],
   providers: [ActivityEvents, AuthGuard, AuthService, CatalogService, UsersService, CartService, OrdersService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

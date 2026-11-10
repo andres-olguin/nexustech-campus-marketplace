@@ -1,3 +1,5 @@
+> Documento historico del 9 de noviembre. El transporte post-commit fue reemplazado por outbox transaccional en la rama Mongo QA. Estado actual: [MONGO_QA_2026-11-10.md](MONGO_QA_2026-11-10.md).
+
 # Contrato de integración ActivityModule — NestJS
 
 Responsable: agente Antigravity CLI. Directorio exclusivo: `backend/src/activity/`. No se ha creado ni modificado en esta rama. No incorporar `config/mongo.js`, fallback en memoria ni servidor Express.

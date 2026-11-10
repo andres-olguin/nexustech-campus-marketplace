@@ -33,9 +33,11 @@ export class CatalogService {
     return product;
   }
   async create(userId: string, dto: ProductDto) {
-    const product = await this.db.getRepository(Product).save({ ...dto, sellerId: userId });
-    this.events.publish('product.created', userId, product.id);
-    return product;
+    return this.db.transaction(async em => {
+      const product = await em.save(Product, em.create(Product, { ...dto, sellerId: userId }));
+      await this.events.enqueue(em, 'product.created', userId, product.id);
+      return product;
+    });
   }
   async update(userId: string, id: string, dto?: UpdateProductDto) {
     const product = await this.db.transaction(async em => {
@@ -43,9 +45,11 @@ export class CatalogService {
       if (!product) throw new NotFoundException('Producto no encontrado');
       if (product.sellerId !== userId) throw new ForbiddenException('Solo el vendedor puede modificar el producto');
       Object.assign(product, dto ?? { isActive: false });
-      return em.save(Product, product);
+      const saved = await em.save(Product, product);
+      await this.events.enqueue(em, 'product.updated', userId, id);
+      return saved;
     });
-    this.events.publish('product.updated', userId, id);
+
     return dto ? product : { deleted: true };
   }
 }
