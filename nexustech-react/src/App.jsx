@@ -152,7 +152,7 @@ export default function App() {
           <LoginPage shop={shop} onPublish={() => open({ type: "publish" })} />
         )}
         {route === "rastreo" && <TrackingPage shop={shop} />}
-        {route === "historial" && <InteractionsPage />}
+        {route === "historial" && <InteractionsPage shop={shop} />}
         {route === "contacto" && (
           <Alert title="Contacto no disponible">
             No existe un servicio de mensajes en la API actual. No se enviarán

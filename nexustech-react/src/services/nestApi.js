@@ -370,5 +370,31 @@ export function createApiClient({
         body: { status },
         schema: schemas.sellerOrder,
       }),
+    // Endpoints MongoDB (NoSQL) — Interacciones y Auditoría
+    createInteraction: ({ targetId, targetType, message, receiverId }) =>
+      request("/activity/interactions", {
+        method: "POST",
+        secure: true,
+        body: { targetId, targetType, message, receiverId },
+      }),
+    targetInteractions: (targetId, signal) =>
+      request("/activity/interactions/target/" + id(targetId), {
+        signal,
+      }),
+    myInteractions: (signal) =>
+      request("/activity/interactions/me", {
+        secure: true,
+        signal,
+      }),
+    resourceLogs: (resourceId, signal) =>
+      request("/activity/logs/resource/" + id(resourceId), {
+        secure: true,
+        signal,
+      }),
+    myLogs: (signal) =>
+      request("/activity/logs/me", {
+        secure: true,
+        signal,
+      }),
   };
 }
