@@ -1,24 +1,118 @@
-import Button from '../ui/Button.jsx';
-import Field from '../ui/Field.jsx';
-import useValidatedForm from '../../hooks/useValidatedForm.js';
-import { categories } from '../../utils/format.js';
-
-function validate(values) {
-  const errors = {};
-  if (values.nombre.trim().length < 3) errors.nombre = 'Ingresa un nombre de al menos 3 caracteres.';
-  const price = Number(values.precio);
-  if (!values.precio || !Number.isInteger(price) || price < 1000 || price > 2500000) errors.precio = 'Ingresa un precio entero entre $1.000 y $2.500.000.';
-  if (!categories.includes(values.categoria)) errors.categoria = 'Selecciona una categoría válida.';
-  if (values.imagen.trim()) {
-    try { if (new URL(values.imagen.trim()).protocol !== 'https:') throw new Error(); }
-    catch { errors.imagen = 'Usa un enlace de imagen que comience con https://.'; }
+import { useState } from "react";
+import Button from "../ui/Button.jsx";
+import Field from "../ui/Field.jsx";
+import Alert from "../ui/Alert.jsx";
+export default function PublishForm({
+  initialProduct,
+  categories,
+  busy,
+  onSave,
+  onCancel,
+}) {
+  const [error, setError] = useState("");
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const body = {
+      name: form.get("name").trim(),
+      description: form.get("description").trim(),
+      categoryId: form.get("categoryId"),
+      price: Number(form.get("price")),
+      stock: Number(form.get("stock")),
+    };
+    if (form.get("imageUrl").trim())
+      body.imageUrl = form.get("imageUrl").trim();
+    try {
+      await onSave(body);
+    } catch (err) {
+      setError(err.message);
+    }
   }
-  if (values.descripcion.trim().length < 10) errors.descripcion = 'Describe el equipo con al menos 10 caracteres.';
-  if (values.vendedor.trim().length < 2) errors.vendedor = 'Ingresa el nombre del responsable.';
-  return errors;
-}
-export default function PublishForm({ user, onSave, onCancel }) {
-  const form = useValidatedForm({ nombre: '', categoria: 'Hardware', precio: '', imagen: '', descripcion: '', vendedor: user?.nombre || '' }, validate, onSave);
-  const props = (name) => ({ name, value: form.values[name], onChange: form.change, error: form.errors[name] });
-  return <form ref={form.ref} onSubmit={form.submit} noValidate><Field label="Nombre del producto" {...props('nombre')} autoFocus required maxLength={160} placeholder="Ej. Teclado mecánico para programación" /><div className="nt-form-row"><Field label="Precio en CLP" {...props('precio')} type="number" min="1000" max="2500000" step="1" required placeholder="65000" /><Field label="Categoría" {...props('categoria')} as="select" required>{categories.map((cat) => <option key={cat}>{cat}</option>)}</Field></div><Field label="Enlace de imagen (opcional)" {...props('imagen')} type="url" maxLength={1000} placeholder="https://..." hint="Si lo dejas vacío, se usa una ilustración local." /><Field label="Descripción y estado" {...props('descripcion')} as="textarea" rows={3} required maxLength={2000} placeholder="Describe las especificaciones y el estado del equipo." /><Field label="Responsable de la publicación" {...props('vendedor')} required maxLength={80} /><div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button type="submit" icon="plus">Publicar producto</Button></div></form>;
+  const p = initialProduct || {};
+  return (
+    <form onSubmit={submit} aria-busy={busy}>
+      {error && <Alert tone="error">{error}</Alert>}
+      <Field
+        label="Nombre del producto"
+        name="name"
+        defaultValue={p.name || ""}
+        required
+        minLength={3}
+        maxLength={160}
+      />
+      <Field
+        label="Descripción"
+        name="description"
+        as="textarea"
+        defaultValue={p.description || ""}
+        required
+        minLength={10}
+        maxLength={2000}
+        rows={3}
+      />
+      <div className="nt-form-row">
+        <Field
+          label="Categoría"
+          name="categoryId"
+          as="select"
+          defaultValue={p.categoryId || ""}
+          required
+        >
+          <option value="" disabled>
+            Selecciona una categoría
+          </option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Field>
+        <Field
+          label="Precio en CLP"
+          name="price"
+          type="number"
+          defaultValue={p.price || ""}
+          required
+          min={1000}
+          max={2500000}
+          step={1}
+        />
+      </div>
+      <Field
+        label="Stock"
+        name="stock"
+        type="number"
+        defaultValue={p.stock ?? 1}
+        required
+        min={0}
+        max={100000}
+        step={1}
+      />
+      <Field
+        label="Imagen HTTPS (opcional)"
+        name="imageUrl"
+        type="url"
+        pattern="https://.*"
+        maxLength={1000}
+        defaultValue={p.imageUrl || ""}
+        hint="Omitir para usar una imagen representativa. No se admiten archivos adjuntos."
+      />
+      {!categories.length && (
+        <Alert>Crea primero una categoría desde Mi cuenta.</Alert>
+      )}
+      <div className="nt-form-actions">
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={busy || !categories.length}>
+          {busy
+            ? "Guardando…"
+            : initialProduct
+              ? "Guardar cambios"
+              : "Publicar producto"}
+        </Button>
+      </div>
+    </form>
+  );
 }

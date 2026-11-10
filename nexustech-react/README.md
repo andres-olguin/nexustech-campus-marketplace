@@ -1,155 +1,121 @@
-# NexusTech Store · Campus Hub UNAB
+# NexusTech Store · Campus Hub UNAB (Hito 3 Full Stack)
 
-Taller Evaluado 2: adaptación a React del marketplace de hardware y soluciones informáticas del Taller Evaluado 1. Esta entrega continúa los archivos proporcionados y desarrolla la parte visual en componentes reutilizables, con una aplicación funcional para demostrarlos.
+Integración completa entre frontend React 19 y backend canónico NestJS 11 con persistencia relacional en PostgreSQL y TypeORM, preparada para el Hito 3.
 
 ## Integrantes
 
-Nombres tomados del README del Taller 1:
+- Andrés Olguín
+- Miguel Margas Cerpa
+- Enrique Chamys
+- Benjamín Aguilera
 
-- Miguel Margas.
-- Enrique Chamys.
-- Maximiliano Valdés.
-- Andrés Olguín.
+## Arquitectura del Sistema
 
-La distribución definitiva y las contribuciones efectivas deben registrarse en el repositorio del equipo.
+El sistema implementa una arquitectura desacoplada full stack:
+- **Frontend:** React 19 + Vite 7 + Vanilla CSS / Bootstrap 5 responsive.
+- **Backend canónico:** NestJS 11 (`feat/hito3-codex-backend`, commit `7c72034`, PR #4), modularizado con TypeORM, validación estricta con `class-validator`, y autenticación JWT.
+- **Base de Datos Relacional:** PostgreSQL (migraciones TypeORM, transacciones ACID para pedidos y control de concurrencia en stock).
+- **Base de Datos Documental (Pendiente de integración):** MongoDB (prevista para `ActivityModule`/historial de auditoría).
 
-## Problemática y usuarios
+## Atención para el Hito 3
 
-Las publicaciones de tecnología se dispersan entre grupos de mensajería y redes sociales. NexusTech reúne un catálogo que permite buscar, filtrar, guardar productos y simular una compra con seguimiento.
+Este README describe la rama integrada React + NestJS y **no** garantiza todavía el cumplimiento de MongoDB y Docker: son requisitos obligatorios pendientes de integrar y comprobar. La entrega debe descargarse de esta rama o de una rama de integración posterior, no de una `main` desactualizada. Los nombres y aportes individuales deben contrastarse con las ramas y commits reales de cada integrante.
 
-Los usuarios objetivo son estudiantes y miembros de la comunidad universitaria interesados en hardware, periféricos, equipos de trabajo y soluciones informáticas.
+## Variables de Entorno Frontend
 
-## Continuidad con el primer trabajo
+En `nexustech-react/`:
+- `VITE_API_BASE_URL`: URL base del API NestJS (por defecto: `http://localhost:3000/api/v1`).
+- `VITE_PUBLIC_DOLLAR_URL`: Endpoint para cotización referencial USD (mindicador.cl).
 
-Se conservan NexusTech, Campus Hub UNAB, la identidad oscura con cian, las cuatro categorías, los precios en CLP y la combinatoria original de 2.400 productos, con 24 por página.
+Copiar desde `.env.example` si se requiere modificar el puerto del API:
+```bash
+cp .env.example .env
+```
 
-El código que antes creaba HTML con innerHTML pasa a componentes React y renderizado de listas con keys. Los formularios, el carrito y los favoritos se conectan mediante props y callbacks. Acceso, contacto y rastreo se unifican con la tienda; los archivos recibidos de acceso y contacto todavía tenían textos de VetConnect.
+## Ejecución del Proyecto
 
-Los originales están en base-taller1, sin modificaciones, como referencia. La aplicación ejecutable es la de la raíz y src. docs/MIGRACION.md muestra las correspondencias.
+### 1. Iniciar Backend (NestJS + PostgreSQL)
+Desde el directorio del backend (`backend/`):
+```bash
+npm ci
+npm run migration:run
+npm run build
+npm run start:dev
+```
+- API Base: `http://localhost:3000/api/v1`
+- Swagger UI: `http://localhost:3000/docs`
 
-## Funcionalidades
+### 2. Iniciar Frontend (React)
+Desde el directorio `nexustech-react/`:
+```bash
+npm ci
+npm run dev
+```
+Acceder a `http://localhost:5173`.
 
-- Catálogo, búsqueda sin distinguir tildes, categorías, presupuesto, orden y paginación.
-- Tarjetas reutilizables, detalle, reseñas de ejemplo y selección de cantidad y acabado.
-- Favoritos con su propia pantalla.
-- Carrito por producto y acabado, ajuste de cantidades y totales.
-- Publicación validada, eliminación con confirmación y opción de deshacer.
-- Pedido simulado con datos de despacho y código de seguimiento.
-- Rastreo del pedido creado, guía original 9876543210 y avance simulado de estados.
-- Acceso y perfil locales; formulario de contacto que registra consultas de demostración.
-- Persistencia local de publicaciones, favoritos, carrito, pedidos, perfil y consultas.
-- Referencia USD mediante una consulta real a una API pública.
-- Navegación y formularios adaptables a computadora, tableta y celular.
+### 3. Compilación de Producción
+```bash
+npm run build
+npm run preview
+```
 
-## Ejecución
+## Pruebas Automatizadas
 
-Para ver la demostración sin instalar, abrir VISTA_PREVIA.html en un navegador actualizado. Las imágenes y estilos están incluidos. La función de referencia USD necesita internet.
+El proyecto cuenta con un conjunto de pruebas automatizadas reproducibles:
 
-Para editar, usar Node.js 22.12 o posterior de la rama 22, o Node.js 24. Abrir esta carpeta en Visual Studio Code y ejecutar:
+### Pruebas Unitarias del Cliente HTTP y Validadores
+Ejecución:
+```bash
+npm test
+```
+**Resultado:** 12/12 pruebas aprobadas (`test/api.test.js`):
+- Validación de URLs base y normalización de endpoints.
+- Manejo canónico de errores HTTP (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict, 503 Service Unavailable).
+- Limpieza automática de credenciales JWT al recibir 401.
+- Rechazo estricto ante respuestas incompatibles (evita catálogos fantasma).
+- Inyección de headers de autorización `Bearer <token>`.
+- Generación de una clave de idempotencia por compra, enviada en el cuerpo `{shippingAddress,idempotencyKey}` a `POST /api/v1/orders` (no en una cabecera `x-idempotency-key`).
 
-    npm install
-    npm run dev
+### Pruebas End-to-End en Navegador Real (Playwright)
+Ejecución:
+```bash
+npm run test:e2e
+```
+El script automatizado `scripts/run-integration.cjs`:
+1. Levanta una instancia aislada de PostgreSQL 18 en puerto efímero.
+2. Compila y ejecuta las migraciones TypeORM del backend NestJS.
+3. Inicia la API NestJS en puerto efímero.
+4. Inicia el servidor de preview de Vite.
+5. Ejecuta la suite de Playwright en Chromium real.
 
-Abrir la dirección que muestra Vite. Para comprobar y visualizar la compilación:
+**Resultado reportado por el agente:** 5/5 pruebas de navegador aprobadas:
+1. `marketplace flow: register -> publish/edit -> favorites/cart -> multi-seller order -> tracking/cancel -> relogin persistence`: Verifica el ciclo completo con usuarios sintéticos compradores y vendedores.
+2. `responsive navigation: desktop and mobile layout adapts correctly`: Prueba renderizado a 390px y 768px.
+3. `checkout retry: lost response retries same real committed order without double purchase`: Idempotencia real comprobada.
+4. `session invalidation: 401 clears authenticated state without retention`: Cierre seguro de sesión.
+5. `api failure: unavailable backend displays error message without mock fallback`: Fallback seguro ante caídas del backend.
 
-    npm run build
-    npm run preview
+## Flujos Operativos Verificados
+- [x] Registro y autenticación JWT de compradores y vendedores.
+- [x] Consulta y filtrado de catálogo desde base de datos PostgreSQL real.
+- [x] Publicación, edición y eliminación de productos por vendedor autorizado.
+- [x] Gestión de carrito persistente y sincronizado con stock.
+- [x] Lista de favoritos persistente por usuario.
+- [x] Checkout transaccional con clave de idempotencia y cálculo seguro de totales en servidor (sin almacenamiento de tarjetas).
+- [x] Descuento atómico de stock.
+- [x] Consulta de órdenes y actualización de estados por el vendedor responsable.
+- [x] Persistencia de sesión tras recarga y re-login.
 
-Se utilizó Node.js 24 para la preparación. package-lock.json conserva las versiones resueltas.
+## Aspectos de Seguridad y Calidad
+- **Tokens JWT:** Almacenamiento en memoria/estado de sesión, eliminación inmediata ante 401.
+- **Sin Datos Sensibles de Pago:** El checkout no solicita ni persiste números de tarjeta ni CVV en frontend o base de datos.
+- **Validación de Identidad:** La autorización se basa estrictamente en el token JWT verificado por el servidor; no se envía ni confía en cabeceras inseguras como `x-user-id`.
+- **Integridad de Datos:** No se recurre a catálogos simulados cuando la API está fuera de servicio; se presentan alertas informativas con opción de reintento.
 
-## Organización
+## Limitaciones y Deuda Técnica
+- **MongoDB / ActivityModule:** No está integrado en el flujo principal del backend NestJS ni en las vistas del frontend (la vista de interacciones en React muestra el estado de espera para cuando el backend exponga los endpoints de MongoDB).
+- **Docker Compose:** La verificación local se realizó con procesos Node/PostgreSQL embebidos debido a restricciones de Docker Desktop en el entorno de desarrollo.
 
-| Carpeta o archivo | Responsabilidad |
-| --- | --- |
-| src/components/ui | Botones, campos, mensajes, tarjetas, diálogo, imágenes e íconos. |
-| src/components/layout | Cabecera, navegación y pie común. |
-| src/components/catalog | Tarjeta de producto, filtros, paginación, presentación y referencia USD. |
-| src/components/shop | Detalle, carrito, publicación y pedido. |
-| src/pages | Catálogo, favoritos mediante CatalogPage, rastreo, contacto y acceso. |
-| src/hooks/useShop.js | Estado y acciones locales de la tienda. |
-| src/hooks/useHashRoute.js | Navegación por hash y respuesta a atrás/adelante. |
-| src/hooks/useExchangeRate.js | Estados de carga, respuesta y error de la API. |
-| src/hooks/useValidatedForm.js | Valores, validación y foco compartidos entre formularios. |
-| src/services/publicApi.js | Fetch, validación de la respuesta y timeout. |
-| src/data | Configuración original del catálogo, generador y pedido inicial. |
-| src/assets | Fotografías locales, ilustración de respaldo y recursos propios. |
-| src/styles/styles.css | Identidad NexusTech, estados y media queries. |
-| docs | Diseño previo, wireframes, migración y verificación. |
-| GUIA_PARTE_4.md | Guion y explicación para estudiar. |
-| INTEGRACION.md | Props, contratos y coordinación con el equipo. |
-
-App.jsx conecta vistas, controlador y ventanas. Bootstrap se importa antes del CSS propio. Se usa su CSS para controles y utilidades; la apertura de ventanas y las interacciones se gestionan con React.
-
-## Datos y persistencia
-
-catalogConfig.json conserva los datos de generación del main.js original. createProducts produce los 2.400 objetos iniciales; no se insertan todos en el DOM a la vez.
-
-useShop conserva en localStorage, bajo nexustech-react-v2, las publicaciones añadidas, las eliminaciones, los favoritos, las líneas del carrito, los pedidos, el perfil y las consultas. El catálogo inicial se vuelve a generar y no se duplica completo en el almacenamiento.
-
-La contraseña de ejemplo solo valida el formulario y no se guarda. Las ventanas, filtros y avisos son estados temporales. Los avisos normales se cierran automáticamente; el aviso que permite deshacer permanece hasta que se realiza otra acción o se cierra.
-
-Si el navegador bloquea el almacenamiento, aparece un mensaje y la aplicación funciona durante la sesión. Restaurar demostración requiere confirmar y solo restablece los datos de este proyecto.
-
-## API pública
-
-| Elemento | Implementación |
-| --- | --- |
-| Nombre | Indicadores económicos diarios de mindicador.cl. |
-| Sitio y referencia oficial | https://mindicador.cl |
-| Endpoint | https://mindicador.cl/api/dolar |
-| Método | GET. |
-| Parámetros | Ninguno. |
-| Clave o autenticación | La consulta pública utilizada no requirió una clave. |
-| Respuesta usada | codigo y los campos valor y fecha de serie. |
-| Selección | Registro válido con fecha más reciente. |
-| Aporte | Comparar precios de hardware en CLP con una referencia aproximada en USD. |
-| Cálculo | Precio CLP dividido por el valor CLP de un USD. |
-| Ubicación | Panel de filtros, tarjetas, detalle y total del carrito. |
-| Carga | Mensaje mientras se consulta; los productos siguen disponibles. |
-| Error | Mensaje y reintento; se conservan los precios CLP. |
-| Timeout | Ocho segundos. |
-| Consulta | Se inicia al pulsar Ver referencia USD; no hay sondeo automático. |
-| Atribución | Enlace visible a mindicador.cl y fecha del dato. |
-
-El dato se identifica con su fecha; no se presenta como una cotización instantánea. El pedido siempre se calcula en CLP. No se utiliza una tasa inventada si falla la consulta.
-
-La consulta y su respuesta se verificaron durante la preparación. El sitio principal devolvió un error en ese momento, aunque el endpoint respondió. No se pudo confirmar una cuota ni una licencia de reutilización específica; la persona responsable de la API debe revisar las condiciones del proveedor antes de la entrega definitiva. Los detalles de las pruebas están en docs/VERIFICACION.md.
-
-## Diseño previo y parte 4
-
-docs/DISENO.md define la navegación, jerarquía, flujos, componentes y criterios visuales antes de la implementación de esta adaptación. Los wireframes muestran catálogo y celular.
-
-La persona 4 puede centrarse en ProductCard, Button, Field, Dialog, Navbar, los recursos locales y las media queries. El controlador de la tienda y el servicio de API se incluyen para que la interfaz pueda demostrarse y conectarse con el trabajo de los otros integrantes.
-
-## Uso de Inteligencia Artificial
-
-- Herramienta: ChatGPT.
-- Propósito: adaptar el trabajo original a React, proponer componentes y estilos responsive, conectar una demostración funcional, revisar errores y preparar documentación.
-- Consultas representativas: «Hace la parte 4», «Quiero que lo mejores» y el pedido de trabajar sobre los archivos del primer taller.
-- Resultado: proyecto, vista previa, recursos organizados, diseño, guía e integración.
-- Revisión durante la preparación: comparación del catálogo con el generador original, compilación y pruebas visuales y funcionales.
-- Modificación humana: completar con las adaptaciones y correcciones que efectivamente realice cada integrante.
-- Aprendizaje: completar después de estudiar qué hacen los componentes, props, estados, callbacks y efectos utilizados.
-
-No atribuir al equipo revisiones, commits o decisiones que todavía no realizó. La defensa requiere comprender el código que se presente.
-
-## Límites de la demostración
-
-Los productos y reseñas son datos simulados del trabajo original. No hay verificación real de hardware ni garantías comerciales. Compra, seguimiento, sesión y contacto son demostraciones locales: no hay cobros, envío físico, verificación de credenciales ni envío de correos.
-
-La persistencia corresponde a este navegador y no se sincroniza entre personas o equipos. La referencia USD depende de la conexión y del proveedor. Las fotografías se incrustan para disponer de una vista previa autónoma, lo que aumenta el tamaño del JavaScript compilado; Vite informa un aviso de tamaño de chunk.
-
-## Git y colaboración
-
-Integrar esta carpeta en el repositorio del equipo, utilizando develop y una rama feature/componentes-nexustech. Hacer commits descriptivos durante la adaptación y abrir un Pull Request hacia develop. La integración final a main corresponde al equipo.
-
-Este paquete no crea ni acredita commits o Pull Requests de los integrantes.
-
-## Referencias técnicas
-
-- [React: props y children](https://react.dev/learn/passing-props-to-a-component)
-- [React: efectos](https://react.dev/learn/synchronizing-with-effects)
-- [Bootstrap: breakpoints](https://getbootstrap.com/docs/5.3/layout/breakpoints/)
-- [Vite](https://vite.dev/guide/)
-- [Diálogo nativo](https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/showModal)
-- [localStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
+## Declaración de Uso de IA
+- **Herramientas:** Antigravity Flash / Gemini 2.5 / Codex.
+- **Alcance:** Diagnóstico de compatibilidad contractual HTTP, corrección de codificación UTF-8 BOM en scripts de prueba, implementación de suite de integración E2E con Playwright, y documentación técnica de entrega.

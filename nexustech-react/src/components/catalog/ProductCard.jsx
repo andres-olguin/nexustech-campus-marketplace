@@ -1,20 +1,95 @@
-import Badge from '../ui/Badge.jsx';
-import Button from '../ui/Button.jsx';
-import Icon from '../ui/Icon.jsx';
-import ProductImage from '../ui/ProductImage.jsx';
-import { formatCLP, formatUSD } from '../../utils/format.js';
-
-// Los datos y las acciones pertenecen al padre; la tarjeta solo presenta el producto.
-export default function ProductCard({ product, favorite, onFavorite, onDetail, onAdd, onDelete, usdRate }) {
-  return <article className="nt-product-card">
-    <div className="nt-product-photo">
-      <button className="nt-photo-button" onClick={() => onDetail(product)} aria-label={'Ver detalle de ' + product.nombre}><ProductImage src={product.imagen} alt={product.nombre} loading="lazy" /></button>
-      <span className="nt-photo-label">PUBLICACIÓN DEMO</span>
-      <div className="nt-product-tools">
-        <Button variant="ghost" className="nt-icon-button" aria-label={(favorite ? 'Quitar de favoritos: ' : 'Guardar en favoritos: ') + product.nombre} aria-pressed={favorite} onClick={() => onFavorite(product.id)}><Icon name="heart" filled={favorite} size={19} /></Button>
-        {onDelete && <Button variant="ghost" icon="trash" className="nt-icon-button nt-delete" aria-label={'Eliminar publicación: ' + product.nombre} onClick={() => onDelete(product)} />}
+import Badge from "../ui/Badge.jsx";
+import Button from "../ui/Button.jsx";
+import Icon from "../ui/Icon.jsx";
+import ProductImage from "../ui/ProductImage.jsx";
+import { formatCLP } from "../../utils/format.js";
+export default function ProductCard({
+  product: p,
+  category,
+  favorite,
+  onFavorite,
+  onDetail,
+  onAdd,
+  onEdit,
+  onArchive,
+  own,
+  busy,
+}) {
+  return (
+    <article className="nt-product-card">
+      <div className="nt-product-photo">
+        <button
+          className="nt-photo-button"
+          onClick={() => onDetail(p.id)}
+          aria-label={"Ver detalle de " + p.name}
+        >
+          <ProductImage src={p.imageUrl} alt={p.name} loading="lazy" />
+        </button>
+        <span className="nt-photo-label">
+          {p.isActive ? "PUBLICACIÓN CAMPUS" : "ARCHIVADA"}
+        </span>
+        <div className="nt-product-tools">
+          <Button
+            variant="ghost"
+            className="nt-icon-button"
+            aria-label={
+              (favorite ? "Quitar de favoritos: " : "Guardar en favoritos: ") +
+              p.name
+            }
+            aria-pressed={favorite}
+            disabled={busy}
+            onClick={() => onFavorite(p.id)}
+          >
+            <Icon name="heart" filled={favorite} />
+          </Button>
+          {own && (
+            <>
+              <Button
+                variant="ghost"
+                icon="edit"
+                aria-label={"Editar producto: " + p.name}
+                onClick={() => onEdit(p)}
+                disabled={busy}
+              />
+              <Button
+                variant="ghost"
+                icon="trash"
+                aria-label={"Archivar publicación: " + p.name}
+                onClick={() => onArchive(p)}
+                disabled={busy}
+              />
+            </>
+          )}
+        </div>
       </div>
-    </div>
-    <div className="nt-product-body"><Badge tone="muted">{product.categoria}</Badge><h3><button onClick={() => onDetail(product)} title={product.nombre}>{product.nombre}</button></h3><p className="nt-product-seller"><Icon name="user" size={13} />{product.vendedor}</p><div className="nt-product-price"><strong>{formatCLP(product.precio)}</strong>{usdRate && <span>≈ {formatUSD(product.precio / usdRate)}</span>}</div><div className="nt-product-buttons"><Button variant="secondary" onClick={() => onDetail(product)}>Ver detalle</Button><Button icon="plus" aria-label={'Agregar al carrito: ' + product.nombre} onClick={() => onAdd(product.id)}>Agregar</Button></div></div>
-  </article>;
+      <div className="nt-product-body">
+        <div className="nt-card-meta">
+          <Badge>{category || "Categoría"}</Badge>
+          <span className="nt-stock-tag">Stock: {p.stock}</span>
+        </div>
+        <h3>
+          <button onClick={() => onDetail(p.id)}>{p.name}</button>
+        </h3>
+        <p className="nt-product-seller">
+          {own ? "Tu publicación" : "Vendedor " + p.sellerId.slice(0, 8)}
+        </p>
+        <div className="nt-product-price">
+          <strong>{formatCLP(p.price)}</strong>
+        </div>
+        <div className="nt-product-buttons">
+          <Button variant="secondary" onClick={() => onDetail(p.id)}>
+            Ver detalle
+          </Button>
+          <Button
+            icon="plus"
+            disabled={busy || own || !p.isActive || p.stock < 1}
+            onClick={() => onAdd(p.id)}
+            aria-label={"Agregar al carrito: " + p.name}
+          >
+            {own ? "Propio" : p.stock ? "Agregar" : "Agotado"}
+          </Button>
+        </div>
+      </div>
+    </article>
+  );
 }
