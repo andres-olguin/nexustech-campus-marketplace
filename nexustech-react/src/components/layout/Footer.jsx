@@ -33,11 +33,13 @@ export default function Footer() {
         <div className="nt-footer-col nt-footer-academic">
           <span className="nt-footer-heading">PROYECTO ACADÉMICO</span>
           <div className="nt-unab-card">
-            <img
-              src={unabLogo}
-              alt="Universidad Andrés Bello"
-              className="nt-unab-footer-logo"
-            />
+            <div className="nt-unab-logo-box">
+              <img
+                src={unabLogo}
+                alt="Universidad Andrés Bello"
+                className="nt-unab-footer-logo"
+              />
+            </div>
             <p>
               Desarrollado para la asignatura <strong>Taller de Integración 3</strong>.
               Escuela de Tecnologías de la Información, Facultad de Ingeniería.

@@ -1732,18 +1732,31 @@ html:has(dialog.nt-dialog[open]) {
   background: rgba(7, 25, 59, 0.6);
   border: 1px solid rgba(24, 51, 95, 0.8);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.nt-unab-logo-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+  max-width: 100%;
 }
 
 .nt-unab-footer-logo {
-  max-height: 36px;
+  height: 38px;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
-  align-self: flex-start;
-  filter: brightness(1.15) contrast(1.05);
+  display: block;
 }
 
 .nt-unab-card p {
