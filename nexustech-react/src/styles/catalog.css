@@ -75,6 +75,12 @@
 .nt-filter-body { padding: 16px; }
 .nt-filter-body[hidden] { display: none; }
 .nt-filter-body .nt-field { margin-bottom: 17px; }
+.nt-filter-context { display: flex; align-items: center; gap: 10px; padding: 9px; margin-bottom: 14px; min-width: 0; color: #ddf7ff; background: #152b40; border: 1px solid #345870; border-radius: 9px; }
+.nt-filter-context-icon { display: grid; place-items: center; flex: 0 0 32px; height: 32px; border-radius: 7px; color: #8fe9fa; background: #1d3a51; }
+.nt-filter-context > div { min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
+.nt-filter-context > div > span { display: block; margin-bottom: 2px; font-size: 11px; color: #b0c8dc; }
+.nt-filter-context strong { display: block; font-size: 13px; }
+.nt-filter-body .nt-type-select { margin-top: 13px; }
 .nt-budget { display: flex; flex-direction: column; gap: 4px; }
 .nt-budget label { font-size: 12px; color: #d0dbea; }
 .nt-budget > strong { font-size: 20px; color: #9aebfc; font-variant-numeric: tabular-nums; }
@@ -118,6 +124,8 @@
 .nt-product-body h3 { margin: 0 0 8px; min-height: 2.8em; font-size: 14px; font-weight: 650; line-height: 1.4; }
 .nt-product-body h3 > button { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; padding: 0; border: 0; text-align: left; background: transparent; color: inherit; }
 .nt-product-seller { display: flex; align-items: flex-start; gap: 5px; margin: 0 0 12px; color: #adbed1; font-size: 12px; overflow-wrap: anywhere; }
+.nt-product-highlights { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 10px; padding: 0; list-style: none; }
+.nt-product-highlights li { max-width: 100%; padding: 3px 6px; border: 1px solid #34556e; border-radius: 5px; color: #c2eaf8; background: #132a40; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
 .nt-product-seller .nt-icon { margin-top: 2px; }
 .nt-product-price { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin-top: auto; margin-bottom: 13px; padding: 10px 0 0; border-top: 1px solid #2e4258; }
 .nt-price { min-width: 0; font-variant-numeric: tabular-nums; }
@@ -164,6 +172,7 @@
   .nt-filter-heading { position: static; border-radius: 12px 12px 0 0; }
   .nt-filter-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .nt-filter-body .nt-field { margin: 0; }
+  .nt-filter-context, .nt-filter-body .nt-type-select { grid-column: 1 / -1; margin: 0; }
   .nt-facets { grid-column: 1 / -1; margin-top: 0; }
   .nt-facet-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .nt-filter-note { display: none; }

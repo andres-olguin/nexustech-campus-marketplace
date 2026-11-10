@@ -1,5 +1,6 @@
 import Button from '../ui/Button.jsx';
 import Field from '../ui/Field.jsx';
+import { profileForProduct } from '../../data/filterProfiles.js';
 import useValidatedForm from '../../hooks/useValidatedForm.js';
 import { categories } from '../../utils/format.js';
 import { isValidPrice, MAX_PRICE, MIN_PRICE, PRICE_ERROR } from '../../utils/pricing.js';
@@ -23,6 +24,7 @@ export default function PublishForm({ user, onSave, onCancel }) {
     marca: '', linea: '', tipo: '', fichaTecnica: '',
   }, validate, onSave);
   const props = (name) => ({ name, value: form.values[name], onChange: form.change, error: form.errors[name] });
+  const profile = profileForProduct({ tipo: form.values.tipo, nombre: form.values.nombre });
   return <form ref={form.ref} onSubmit={form.submit} noValidate>
     <Field label="Nombre del producto" {...props('nombre')} autoFocus required maxLength={160} placeholder="Ej. Teclado mecánico para programación" />
     <div className="nt-form-row">
@@ -39,10 +41,11 @@ export default function PublishForm({ user, onSave, onCancel }) {
           <Field label="Marca del producto" {...props('marca')} maxLength={80} placeholder="Ej. Lenovo" />
           <Field label="Línea o serie" {...props('linea')} maxLength={80} placeholder="Ej. ThinkPad" />
         </div>
-        <Field label="Tipo de producto" {...props('tipo')} maxLength={80} placeholder="Ej. Notebook, monitor o teclado" />
+        <Field label="Tipo de producto" {...props('tipo')} maxLength={80} placeholder="Ej. Memoria RAM, tarjeta de video, notebook" />
         <Field label="Especificaciones técnicas" {...props('fichaTecnica')} as="textarea" rows={3} maxLength={1500}
-          placeholder="Ej. Intel Core i7-13700H, 16 GB RAM DDR5, SSD 512 GB, pantalla IPS 144 Hz"
-          hint="Agrega los datos que conozcas para que el producto aparezca en los filtros correspondientes." />
+          placeholder={'Ej. ' + (profile.example || 'Indica el modelo, la capacidad y las características que correspondan.')}
+          hint={profile.example ? 'Ejemplo para ' + profile.label.toLowerCase() + ': ' + profile.example
+            : 'Indica el tipo y las características que conozcas para que la publicación aparezca en los filtros correspondientes.'} />
       </div>
     </details>
     <div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button type="submit" icon="plus">Publicar producto</Button></div>

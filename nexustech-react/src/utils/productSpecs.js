@@ -1,35 +1,5 @@
-import { formatNumber, normalize } from './format.js';
-
-const field = (key, label, mode = 'exact', unit = '') => ({ key, label, mode, unit });
-export const SPEC_GROUPS = [
-  { id: 'general', label: 'General', fields: [
-    field('brand', 'Marca'), field('series', 'Línea o serie'), field('kind', 'Tipo de producto'), field('weightKg', 'Peso máximo', 'max', 'kg'),
-  ] },
-  { id: 'cpu', label: 'Procesador', fields: [
-    field('cpuBrand', 'Marca del procesador'), field('cpuLine', 'Línea del procesador'), field('cpuModel', 'Modelo del procesador'),
-    field('cores', 'Núcleos mínimos', 'min'), field('threads', 'Hilos mínimos', 'min'), field('cpuClass', 'Tipo de procesador'),
-  ] },
-  { id: 'ram', label: 'RAM', fields: [
-    field('ramGb', 'Cantidad mínima de RAM', 'min', 'GB'), field('ramType', 'Tipo de RAM'), field('ramChannels', 'Canales de RAM'),
-  ] },
-  { id: 'display', label: 'Pantalla', fields: [
-    field('displayInches', 'Tamaño mínimo', 'min', '″'), field('panel', 'Tipo de pantalla'), field('displayShape', 'Formato de pantalla'),
-    field('resolution', 'Resolución mínima', 'min', 'p'), field('refreshHz', 'Tasa de refresco mínima', 'min', 'Hz'),
-    field('touch', 'Pantalla táctil'), field('rotating', 'Pantalla rotatoria'),
-  ] },
-  { id: 'gpu', label: 'Tarjeta de video', fields: [
-    field('gpuType', 'Tipo de gráfica'), field('gpuBrand', 'Marca de la gráfica'), field('gpuLine', 'Línea de la gráfica'),
-    field('gpuModel', 'Modelo de la gráfica'), field('vramGb', 'VRAM mínima', 'min', 'GB'),
-  ] },
-  { id: 'storage', label: 'Almacenamiento', fields: [
-    field('storageGb', 'Capacidad mínima', 'min', 'storage'), field('storageType', 'Tipo de almacenamiento'), field('rpm', 'RPM mínimas', 'min', 'RPM'),
-  ] },
-  { id: 'other', label: 'Otros', fields: [
-    field('os', 'Sistema operativo'), field('osVersion', 'Versión del sistema'), field('keyboard', 'Idioma del teclado'),
-    field('fingerprint', 'Lector de huellas'), field('ports', 'Puerto'),
-  ] },
-];
-export const SPEC_FIELDS = SPEC_GROUPS.flatMap((group) => group.fields);
+import { profileForProduct, SPEC_FIELDS } from '../data/filterProfiles.js';
+import { formatNumber } from './format.js';
 
 const cache = new WeakMap();
 const demoCache = new Map();
@@ -50,11 +20,12 @@ export function formatSpecValue(definition, value) {
     return { 2160: '2160p (4K)', 1440: '1440p (QHD)', 1080: '1080p (Full HD)', 720: '720p (HD)' }[value] || value + 'p';
   }
   if (definition.unit === '″') return formatNumber(Number(value)) + '″';
+  if (definition.unit === 'CL') return 'CL' + formatNumber(Number(value));
   if (definition.unit) return formatNumber(Number(value)) + ' ' + definition.unit;
   return String(value);
 }
 
-function parseTechnicalText(text) {
+function parseTechnicalText(text, profile) {
   const attributes = {};
   const put = (key, value) => {
     if (typeof value === 'string' && value || typeof value === 'number' && Number.isFinite(value) && value > 0 || Array.isArray(value) && value.length) {
@@ -66,6 +37,9 @@ function parseTechnicalText(text) {
   put('cores', number(text.match(/\b(\d{1,3})\s*(?:cores|n[uú]cleos)\b/i)?.[1]));
   put('threads', number(text.match(/\b(\d{1,3})\s*(?:threads|hilos)\b/i)?.[1]));
   if (/\b(?:multi[- ]?core|multin[uú]cleo)\b/i.test(text)) put('cpuClass', 'Multinúcleo');
+  put('cpuSocket', text.match(/\b(?:AM[45]|LGA\s*(?:1200|1700|1851))\b/i)?.[0].toUpperCase().replace(/LGA\s*/, 'LGA '));
+  put('cpuBoostGHz', number((text.match(/\bboost\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*GHz\b/i)
+    || text.match(/\b(\d+(?:[.,]\d+)?)\s*GHz\s*boost\b/i))?.[1]));
 
   const intel = text.match(/\b(?:Intel\s+)?(Core\s+(?:Ultra\s+)?(?:i[3579]|[3579])|Xeon|Celeron|Pentium)(?:[\s-]+([A-Z]{0,2}\d[\w-]*))?\b/i);
   const amd = text.match(/\b(?:AMD\s+)?(Ryzen\s+(?:[3579]|Threadripper)|EPYC|Athlon)(?:\s+([A-Z]{0,2}\d[\w-]*))?\b/i);
@@ -83,6 +57,23 @@ function parseTechnicalText(text) {
   put('ramGb', number(ram?.[1]));
   put('ramType', text.match(/\b(?:LP)?DDR[345]X?\b/i)?.[0].toUpperCase());
   if (/\bdual channel\b/i.test(text)) put('ramChannels', 'Dual Channel');
+  if (profile === 'memory') {
+    const kit = text.match(/\b(\d{1,2})\s*[x×]\s*(\d{1,3})\s*GB\b/i);
+    const total = text.match(/\b(?:capacidad(?: total)?|total)\s*[:=]\s*(\d{1,4})\s*GB\b/i);
+    const standalone = text.match(/\b(\d{1,4})\s*GB\b(?!\s*(?:SSD|HDD|NVMe|VRAM|GDDR))/i);
+    put('ramGb', total ? number(total[1]) : kit ? Number(kit[1]) * Number(kit[2]) : number(standalone?.[1]));
+    put('ramModules', number(kit?.[1] || text.match(/\b(\d{1,2})\s*m[oó]dulos?\b/i)?.[1]));
+    const format = text.match(/\b(SO[\s-]?DIMM|RDIMM|UDIMM|DIMM)\b/i)?.[1];
+    if (format) put('ramFormat', /^SO/i.test(format) ? 'SO-DIMM' : /^(?:U)?DIMM$/i.test(format) ? 'DIMM' : format.toUpperCase());
+    put('ramSpeed', number((text.match(/\b(\d{3,5})\s*MT\/s\b/i) || text.match(/\bDDR[345]\s*-\s*(\d{3,5})\b/i))?.[1]));
+    put('ramClock', number(text.match(/\b(\d{3,5})\s*MHz\b/i)?.[1]));
+    put('ramVoltage', number(text.match(/\b(\d+(?:[.,]\d+)?)\s*(?:V|voltios)\b/i)?.[1]));
+    put('ramCl', number(text.match(/\b(?:CL|CAS)\s*[:=]?\s*(\d{1,3})\b/i)?.[1]));
+    put('ramEcc', yesNo(text, /\b(?:soporte\s+)?ECC\s*[:=]\s*(s[ií]|no)\b/i)
+      || (/\b(?:non[- ]|sin\s+)ECC\b/i.test(text) ? 'No' : /\bECC\b/i.test(text) ? 'Sí' : undefined));
+    put('ramHeatsink', yesNo(text, /\bdisipador\s*[:=]\s*(s[ií]|no)\b/i));
+    put('ramFullBuffer', yesNo(text, /\bfull buffer\s*[:=]\s*(s[ií]|no)\b/i));
+  }
 
   put('displayInches', number(text.match(/\b(\d{1,2}(?:[.,]\d+)?)\s*(?:pulgadas\b|pulg\.|["″])/i)?.[1]));
   const panel = text.match(/\b(OLED|IPS|Mini[- ]LED)\b/i)?.[1] || text.match(/\b(?:pantalla|panel)\s+(VA|TN)\b/i)?.[1];
@@ -110,7 +101,25 @@ function parseTechnicalText(text) {
   } else if (/\btarjeta gr[aá]fica\b/i.test(text)) {
     put('gpuType', 'Dedicada');
   }
-  put('vramGb', number(text.match(/\b(\d+)\s*GB\s*(?:VRAM|GDDR[456]X?)\b/i)?.[1]));
+  put('vramType', text.match(/\b(?:GDDR[4567]X?|HBM[23]E?)\b/i)?.[0].toUpperCase());
+  const videoCapacity = text.match(/\bVRAM\s*[:=]?\s*(\d+)\s*GB\b/i) || text.match(/\b(\d+)\s*GB\s*(?:VRAM|GDDR[4567]X?|HBM[23]E?)\b/i);
+  put('vramGb', number(videoCapacity?.[1]));
+  if (profile === 'graphics') {
+    put('gpuBrand', attributes.gpuBrand || text.match(/\b(?:fabricante del chip|GPU)\s*[:=]\s*(NVIDIA|AMD|Intel)\b/i)?.[1]);
+    put('vramBusBits', number(text.match(/\b(?:bus(?: de memoria)?\s*[:=]?\s*)?(\d{2,4})\s*bits\b/i)?.[1]));
+    const pcie = text.match(/\bPCI(?:\s*Express|e)\s*(?:Gen(?:eraci[oó]n)?\s*)?(\d(?:[.,]\d)?)(?:\s*[x×]\s*(1|2|4|8|16)\b)?/i);
+    put('pcieVersion', pcie ? 'PCIe ' + pcie[1].replace(',', '.') + (pcie[1].length === 1 ? '.0' : '') : undefined);
+    put('pcieLanes', number(pcie?.[2]));
+    put('gpuArchitecture', shortText(text.match(/\barquitectura\s*[:=]\s*([^,\n;|]+)/i)?.[1]));
+    put('gpuArchitectureFamily', shortText(text.match(/\bfamilia(?: de arquitectura)?\s*[:=]\s*([^,\n;|]+)/i)?.[1]));
+    const cooling = text.match(/\brefrigeraci[oó]n\s*[:=]\s*(pasiva|activa|por aire|l[ií]quida)\b/i)?.[1];
+    put('gpuCooling', cooling ? cooling[0].toUpperCase() + cooling.slice(1).toLowerCase() : undefined);
+    put('gpuProfile', /\b(?:bajo perfil|low profile)\b/i.test(text) ? 'Bajo perfil'
+      : /\bperfil\s*[:=]\s*est[aá]ndar\b/i.test(text) ? 'Estándar' : undefined);
+    put('gpuLength', number(text.match(/\b(?:largo|longitud)\s*[:=]?\s*(\d{2,3}(?:[.,]\d+)?)\s*mm\b/i)?.[1]));
+    put('gpuSlots', number(text.match(/\b(\d(?:[.,]\d+)?)\s*(?:ranuras|slots)\b/i)?.[1]));
+    put('gpuBenchmark', number(text.match(/\b(?:3DMark\s+)?Time Spy\s*[:=]\s*(\d{3,6})\b/i)?.[1]));
+  }
 
   const storage = text.match(/\b(\d+(?:[.,]\d+)?)\s*(GB|TB)\s*(?:de\s+)?(NVMe|SSD|HDD|eMMC)\b/i);
   const reverseStorage = text.match(/\b(NVMe|SSD|HDD|eMMC)\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(GB|TB)\b/i);
@@ -120,6 +129,20 @@ function parseTechnicalText(text) {
     put('storageType', { NVME: 'NVMe', EMMC: 'eMMC' }[storageType.toUpperCase()] || storageType.toUpperCase());
   }
   put('rpm', number(text.match(/\b(\d{3,5})\s*RPM\b/i)?.[1]));
+  if (profile === 'ssd' || profile === 'hdd') {
+    const genericCapacity = text.match(/\b(\d+(?:[.,]\d+)?)\s*(GB|TB)\b/i);
+    if (genericCapacity && !attributes.storageGb) put('storageGb', capacityGb(genericCapacity[1], genericCapacity[2]));
+    const driveFormat = text.match(/\bM[.-]2\b/i)?.[0] || text.match(/\b(?:2[.,]5|3[.,]5)(?=\s*(?:pulgadas|["″]))/i)?.[0];
+    put('storageFormat', driveFormat ? (/^M/i.test(driveFormat) ? 'M.2' : driveFormat.replace('.', ',') + '″') : undefined);
+    put('storageInterface', /\bNVMe\b/i.test(text) ? 'NVMe' : /\bSATA\b/i.test(text) ? 'SATA' : undefined);
+    for (const [key, pattern] of [
+      ['readMBps', /(?:lectura|read)(?: secuencial)?\s*[:=]?\s*(\d{2,5})\s*MB\/s\b|\b(\d{2,5})\s*MB\/s\s*(?:de\s+)?lectura\b/i],
+      ['writeMBps', /(?:escritura|write)(?: secuencial)?\s*[:=]?\s*(\d{2,5})\s*MB\/s\b|\b(\d{2,5})\s*MB\/s\s*(?:de\s+)?escritura\b/i],
+    ]) {
+      const speed = text.match(pattern);
+      put(key, number(speed?.[1] || speed?.[2]));
+    }
+  }
 
   const windows = text.match(/\bWindows\s+(10|11)(?:\s+(Home|Pro|Enterprise))?\b/i);
   const linux = text.match(/\b(Ubuntu|Debian|Fedora)\b(?:\s+(\d+(?:\.\d+)*))?/i);
@@ -133,6 +156,28 @@ function parseTechnicalText(text) {
   const keyboard = text.match(/\b(?:idioma del teclado|teclado(?:\s+en)?)\s*[:=]?\s*(Espa[ñn]ol(?: latinoamericano)?|Ingl[eé]s|Latinoamericano|Portugu[eé]s)\b/i)?.[1];
   put('keyboard', keyboard ? keyboard[0].toUpperCase() + keyboard.slice(1).toLowerCase() : undefined);
   put('fingerprint', yesNo(text, /\b(?:lector de )?huellas\s*[:=]\s*(s[ií]|no)\b/i));
+  const connection = [
+    [/\bBluetooth\b/i, 'Bluetooth'], [/\b(?:inal[aá]mbric[oa]|wireless|2[.,]4\s*GHz)\b/i, 'Inalámbrica'],
+    [/\b(?:USB|cablead[oa]|con cable)\b/i, 'Por cable'],
+  ].filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
+  put('connection', connection);
+  const colorSwitch = text.match(/\b(?:switch(?:es)?\s+)?(linear red|cherry mx red|cherry mx brown|cherry mx blue|lineal(?:es)?|t[aá]ctil(?:es)?|clicky)\b/i)?.[1];
+  if (colorSwitch) put('keySwitch', colorSwitch[0].toUpperCase() + colorSwitch.slice(1).toLowerCase());
+  put('keyLayout', text.match(/\b(?:TKL|full size|60%|65%|75%)(?=\W|$)/i)?.[0].toUpperCase());
+  put('hotSwap', yesNo(text, /\bhot[- ]swap\s*[:=]\s*(s[ií]|no)\b/i)
+    || (/\bhot[- ]swap\b/i.test(text) ? 'Sí' : undefined));
+  put('rgb', yesNo(text, /\bRGB\s*[:=]\s*(s[ií]|no)\b/i) || (/\bRGB\b/i.test(text) ? 'Sí' : undefined));
+  put('dpi', number(text.match(/\b(\d{2,6})\s*DPI\b/i)?.[1]));
+  put('noiseCancel', yesNo(text, /\b(?:ANC|cancelaci[oó]n activa(?: de ruido)?)\s*[:=]\s*(s[ií]|no)\b/i)
+    || (/\b(?:ANC|cancelaci[oó]n activa)\b/i.test(text) ? 'Sí' : undefined));
+  put('boardChipset', text.match(/\b(?:chipset\s*[:=]?\s*)?([ABHZ]\d{3}[EM]?)\b/i)?.[1].toUpperCase());
+  const board = text.match(/\b(Micro[- ]ATX|mATX|Mini[- ]ITX|E[- ]ATX|ATX)\b/i)?.[1];
+  put('boardFormat', board && (/^(?:micro|mATX)/i.test(board) ? 'Micro ATX' : /^mini/i.test(board) ? 'Mini ITX' : board.toUpperCase()));
+  put('networkSpeed', number(text.match(/\b(\d+(?:[.,]\d+)?)\s*(?:Gb\/s|Gbps|G\s*SFP)\b/i)?.[1]));
+  put('networkPorts', number(text.match(/\b(\d{1,3})\s*puertos\b/i)?.[1]));
+  put('poe', yesNo(text, /\bPoE\+?\s*[:=]\s*(s[ií]|no)\b/i) || (/\bPoE\b/i.test(text) ? 'Sí' : undefined));
+  put('volumeL', number(text.match(/\b(\d{1,4}(?:[.,]\d+)?)\s*(?:litros|L)\b/i)?.[1]));
+  put('energyClass', text.match(/\b(?:clase(?: energ[eé]tica)?|eficiencia energ[eé]tica)\s*[:=]?\s*([A-G](?:\+{1,3})?)(?=\s|[,;\n]|$)/i)?.[1].toUpperCase());
   const ports = [
     [/\bUSB[- ]?C\b/i, 'USB-C'], [/\bUSB[- ]?A\b/i, 'USB-A'], [/\bThunderbolt\b/i, 'Thunderbolt'],
     [/\bHDMI\b/i, 'HDMI'], [/\bDisplayPort\b/i, 'DisplayPort'], [/\bRJ[- ]?45\b/i, 'RJ-45'],
@@ -142,37 +187,28 @@ function parseTechnicalText(text) {
   return attributes;
 }
 
-function demoSpecs(product) {
+function applicable(attributes, profile) {
+  return Object.fromEntries(Object.entries(attributes).filter(([key]) => profile.attributeKeys.has(key)));
+}
+
+function demoSpecs(product, profile) {
+  if (product.especificaciones) return applicable(product.especificaciones, profile);
   const key = product.tipo + '\0' + product.fichaTecnica;
   if (!demoCache.has(key)) {
-    const parsed = parseTechnicalText(product.fichaTecnica + '\n' + product.tipo);
-    const kind = normalize(product.tipo);
-    const system = product.categoria === 'Workstations' || kind.includes('servidor');
-    const allowed = new Set([
-      'general',
-      ...(system || kind.includes('procesador') ? ['cpu'] : []),
-      ...(system || kind.includes('memoria ram') ? ['ram'] : []),
-      ...(system || kind.includes('gpu') ? ['gpu'] : []),
-      ...(system || kind.includes('nvme') ? ['storage'] : []),
-      ...(kind.includes('laptop') || kind.includes('movil') || kind.includes('monitor') ? ['display'] : []),
-      ...(system || kind.includes('switch') ? ['other'] : []),
-    ]);
-    // La demo original combina textos entre familias: no se toma como RAM
-    // o pantalla de un teclado una especificación que no corresponde a su tipo.
-    demoCache.set(key, Object.fromEntries(
-      SPEC_GROUPS.filter((group) => allowed.has(group.id)).flatMap((group) => group.fields)
-        .filter(({ key: name }) => parsed[name] !== undefined).map(({ key: name }) => [name, parsed[name]])
-    ));
+    // Los textos históricos se combinan entre familias; solo se toma lo aplicable.
+    demoCache.set(key, applicable(parseTechnicalText(product.fichaTecnica + '\n' + product.tipo, profile.id), profile));
   }
   return demoCache.get(key);
 }
 
 export function productAttributes(product) {
   if (!cache.has(product)) {
+    const profile = profileForProduct(product);
     const isDemo = product.catalogoDemo === true && typeof product.tipo === 'string' && typeof product.fichaTecnica === 'string';
     const declared = [product.fichaTecnica, product.tipo, product.nombre, product.descripcion].filter(Boolean).join('\n');
+    const parsed = isDemo ? demoSpecs(product, profile) : parseTechnicalText(declared, profile.id);
     cache.set(product, {
-      ...(isDemo ? demoSpecs(product) : parseTechnicalText(declared)),
+      ...(isDemo || profile.id === 'general' ? parsed : applicable(parsed, profile)),
       brand: shortText(product.marca), series: shortText(product.linea), kind: shortText(product.tipo),
     });
   }
@@ -181,9 +217,20 @@ export function productAttributes(product) {
 
 export function productSpecRows(product) {
   const attributes = productAttributes(product);
-  return SPEC_FIELDS.filter(({ key }) => attributes[key] !== undefined).map((definition) => {
+  return SPEC_FIELDS.filter(({ key, source }) => !source && attributes[key] !== undefined).map((definition) => {
     const value = attributes[definition.key];
-    const label = definition.label.replace(/\b(m[ií]nimo|m[ií]nima|m[ií]nimos|m[ií]nimas|m[aá]ximo)\b/gi, '').replace(/\s+/g, ' ').trim();
+    const label = definition.label.replace(/\bm(?:[ií]nim|[aá]xim)[oa]s?\b/gi, '').replace(/\s+/g, ' ').trim();
     return { key: definition.key, label, value: (Array.isArray(value) ? value : [value]).map((item) => formatSpecValue(definition, item)).join(', ') };
   });
+}
+
+export function productSpecHighlights(product) {
+  const id = profileForProduct(product).id;
+  if (id !== 'memory' && id !== 'graphics') return [];
+  const a = productAttributes(product);
+  return (id === 'memory'
+    ? [a.ramGb && formatNumber(a.ramGb) + ' GB', [a.ramType, a.ramFormat].filter(Boolean).join(' · '),
+      a.ramSpeed ? formatNumber(a.ramSpeed) + ' MT/s' : a.ramClock && formatNumber(a.ramClock) + ' MHz']
+    : [a.gpuModel, a.vramGb && formatNumber(a.vramGb) + ' GB' + (a.vramType ? ' ' + a.vramType : ' VRAM'),
+      a.pcieVersion && a.pcieVersion + (a.pcieLanes ? ' x' + a.pcieLanes : '')]).filter(Boolean);
 }

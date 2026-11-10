@@ -9,13 +9,15 @@ import FilterPanel from '../components/catalog/FilterPanel.jsx';
 import Pagination from '../components/catalog/Pagination.jsx';
 import ProductCard from '../components/catalog/ProductCard.jsx';
 import { catalogHref } from '../data/departments.js';
-import { activeFacetLabels, facetCatalog, filterCatalog } from '../utils/catalog.js';
+import { GENERAL_PROFILE, profileForId, profileForProduct, profileForSection } from '../data/filterProfiles.js';
+import { activeFacetLabels, catalogProfiles, catalogSearch, facetCatalog, filterCatalog } from '../utils/catalog.js';
 import { categories, formatNumber } from '../utils/format.js';
 import { MAX_PRICE } from '../utils/pricing.js';
 
 const PER_PAGE = 24;
 const categoryIcons = { all: 'grid', Workstations: 'laptop', Hardware: 'cpu', Periféricos: 'headphones', Soluciones: 'code' };
 const browseCategories = ['all', ...categories];
+const EMPTY_FACETS = {};
 
 function scrollToResults() {
   document.getElementById('resultados')?.scrollIntoView({ block: 'start' });
@@ -42,33 +44,56 @@ export default function CatalogPage({ shop, section, favoriteOnly = false, onDet
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
   const [sort, setSort] = useState('default');
   const [page, setPage] = useState(1);
-  const [facets, setFacets] = useState({});
+  const [typeChoice, setTypeChoice] = useState('');
+  const [technical, setTechnical] = useState({ profileId: GENERAL_PROFILE.id, values: EMPTY_FACETS });
   const favorites = favoriteOnly ? shop.favoriteSet : null;
-  const facetLabels = activeFacetLabels(facets);
-  const activeCount = Number(Boolean(query.trim())) + Number(category !== 'all') + Number(maxPrice < MAX_PRICE) + Number(sort !== 'default') + facetLabels.length;
+  const search = useMemo(() => catalogSearch(query, section), [query, section]);
+  const pool = useMemo(
+    () => filterCatalog(shop.products, { search, category, maxPrice: MAX_PRICE, sort, favorites, section }),
+    [shop.products, search, category, sort, favorites, section]
+  );
+  const { inferred, choices } = useMemo(() => catalogProfiles(pool), [pool]);
+  const fixedProfile = profileForSection(section) || search.profile;
+  const chosen = fixedProfile ? null : profileForId(typeChoice);
+  const profile = fixedProfile || chosen || inferred;
+  const facets = technical.profileId === profile.id ? technical.values : EMPTY_FACETS;
+  // Un cambio de familia descarta los filtros técnicos de la anterior.
+  if (technical.profileId !== profile.id) setTechnical({ profileId: profile.id, values: EMPTY_FACETS });
+  const facetLabels = activeFacetLabels(facets, profile.fields);
+  const activeCount = Number(Boolean(query.trim())) + Number(category !== 'all') + Number(maxPrice < MAX_PRICE)
+    + Number(sort !== 'default') + Number(Boolean(chosen)) + facetLabels.length;
   const emptyFavorites = favoriteOnly && !shop.favoriteSet.size && !activeCount;
 
   function update(setter, value) { setter(value); setPage(1); }
-  function clear() { setQuery(''); setCategory('all'); setMaxPrice(MAX_PRICE); setSort('default'); setFacets({}); setPage(1); }
+  function clear() {
+    setQuery(''); setCategory('all'); setMaxPrice(MAX_PRICE); setSort('default');
+    setTypeChoice(''); setTechnical({ profileId: profile.id, values: EMPTY_FACETS }); setPage(1);
+  }
   function changeCategory(value) {
     if (value === category) return;
     update(setCategory, value);
-    setFacets({});
+    setTypeChoice('');
+    setTechnical({ profileId: profile.id, values: EMPTY_FACETS });
+  }
+  function changeQuery(value) {
+    const next = catalogSearch(value, section);
+    if (next.profile && typeChoice && next.profile.id !== typeChoice) setTypeChoice('');
+    update(setQuery, value);
   }
   function changeFacet(key, value) {
-    setFacets((current) => {
-      const next = { ...current };
+    setTechnical((current) => {
+      const next = { ...(current.profileId === profile.id ? current.values : EMPTY_FACETS) };
       if (value) next[key] = value;
       else delete next[key];
-      return next;
+      return { profileId: profile.id, values: next };
     });
     setPage(1);
   }
   const candidates = useMemo(
-    () => filterCatalog(shop.products, { query, category, maxPrice, sort, favorites, section }),
-    [shop.products, query, category, maxPrice, sort, favorites, section]
+    () => pool.filter((product) => product.precio <= maxPrice && (!chosen || profileForProduct(product) === chosen)),
+    [pool, maxPrice, chosen]
   );
-  const { results: filtered, options } = useMemo(() => facetCatalog(candidates, facets), [candidates, facets]);
+  const { results: filtered, options } = useMemo(() => facetCatalog(candidates, facets, profile.fields), [candidates, facets, profile]);
   const inspect = useCallback((product) => onDetail(product, filtered), [onDetail, filtered]);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
@@ -96,7 +121,7 @@ export default function CatalogPage({ shop, section, favoriteOnly = false, onDet
       </div>
       <div className="nt-browse-tools">
         <Field id="nexus-search" label="Buscar productos" hideLabel icon="search" type="search"
-          placeholder="Buscar productos…" maxLength={160} value={query} onChange={(event) => update(setQuery, event.target.value)} className="nt-catalog-search" />
+          placeholder="Buscar productos…" maxLength={160} value={query} onChange={(event) => changeQuery(event.target.value)} className="nt-catalog-search" />
         <Field label="Ordenar productos" hideLabel as="select" value={sort} onChange={(event) => update(setSort, event.target.value)}>
           <option value="default">Orden inicial</option><option value="low">Menor precio</option>
           <option value="high">Mayor precio</option><option value="name">Nombre: A–Z</option>
@@ -110,6 +135,7 @@ export default function CatalogPage({ shop, section, favoriteOnly = false, onDet
       <div className="nt-catalog-layout">
         <FilterPanel category={category} onCategory={changeCategory} maxPrice={maxPrice}
           onMaxPrice={(value) => update(setMaxPrice, value)} onClear={clear} activeCount={activeCount}
+          profile={profile} typeChoices={fixedProfile ? [] : choices} chosen={chosen} onTypeChange={(value) => update(setTypeChoice, value)}
           options={options} selections={facets} onFacetChange={changeFacet} />
         <div className="nt-results">
           {facetLabels.length > 0 && <div className="nt-facet-chips" role="group" aria-label="Filtros técnicos aplicados">

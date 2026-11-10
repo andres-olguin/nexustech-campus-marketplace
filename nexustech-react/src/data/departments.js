@@ -1,5 +1,6 @@
 import { normalize } from '../utils/format.js';
 import { productAttributes } from '../utils/productSpecs.js';
+import { profileForProduct, profileForSection } from './filterProfiles.js';
 
 const clean = (value) => normalize(value ?? '').replace(/[^a-z0-9]+/g, ' ').trim();
 const anyPhrase = (phrases) => {
@@ -23,6 +24,12 @@ const item = (id, label, match = has(label)) => ({ id, label, match });
 const options = (...rows) => rows.map(([id, label, ...aliases]) => item(id, label, has(label, ...aliases)));
 const group = (id, label, types, children = []) => ({ id, label, match: ofType(label, ...types), children });
 const excludeTypes = (family, ...types) => ({ ...family, match: also(family.match, not(ofType(...types))) });
+const ramUse = (type, format, ...labels) => also(attribute('ramType', type), either(
+  attribute('ramFormat', format),
+  also((product) => !product.attributes.ramFormat, has(...labels)),
+));
+const gpuMaker = (maker, ...labels) => either(attribute('gpuBrand', maker),
+  also((product) => !product.attributes.gpuBrand, has(...labels)));
 
 export const DEPARTMENTS = [
   {
@@ -118,18 +125,19 @@ export const DEPARTMENTS = [
   {
     id: 'computacion', label: 'Computación', icon: 'cpu',
     groups: [
-      group('graficas', 'Tarjetas de video', ['tarjeta de video', 'tarjeta gráfica', 'tarjetas gráficas', 'gpu'], options(
-        ['nvidia', 'NVIDIA GeForce', 'nvidia', 'geforce', 'rtx', 'gtx'], ['amd', 'AMD Radeon', 'amd', 'radeon'],
-      )),
+      group('graficas', 'Tarjetas de video', ['tarjeta de video', 'tarjeta gráfica', 'tarjetas gráficas', 'gpu'], [
+        item('nvidia', 'NVIDIA GeForce', gpuMaker('NVIDIA', 'nvidia', 'geforce', 'rtx', 'gtx')),
+        item('amd', 'AMD Radeon', gpuMaker('AMD', 'amd', 'radeon')),
+      ]),
       group('procesadores', 'Procesadores', ['procesador', 'cpu'], options(['intel', 'Intel', 'core i3', 'core i5', 'core i7', 'core i9', 'xeon'], ['amd', 'AMD', 'ryzen', 'epyc'])),
       group('placas-madre', 'Placas madre', ['placa madre', 'placa base', 'motherboard'], options(
         ['intel-1700', 'Intel 1700', 'lga 1700'], ['intel-1851', 'Intel 1851', 'lga 1851'], ['amd-am4', 'AMD AM4', 'am4'], ['amd-am5', 'AMD AM5', 'am5'],
       )),
       group('ram', 'RAM', ['memoria ram', 'kit memoria ram', 'memoria ddr4', 'memoria ddr5'], [
-        item('ddr4-desktop', 'DDR4 Desktop', also(has('ddr4'), has('desktop', 'udimm', 'dimm', 'escritorio'))),
-        item('ddr5-desktop', 'DDR5 Desktop', also(has('ddr5'), has('desktop', 'udimm', 'dimm', 'escritorio'))),
-        item('ddr4-notebook', 'DDR4 Notebook', also(has('ddr4'), has('notebook', 'sodimm', 'so dimm'))),
-        item('ddr5-notebook', 'DDR5 Notebook', also(has('ddr5'), has('notebook', 'sodimm', 'so dimm'))),
+        item('ddr4-desktop', 'DDR4 Desktop', ramUse('DDR4', 'DIMM', 'desktop', 'escritorio')),
+        item('ddr5-desktop', 'DDR5 Desktop', ramUse('DDR5', 'DIMM', 'desktop', 'escritorio')),
+        item('ddr4-notebook', 'DDR4 Notebook', ramUse('DDR4', 'SO-DIMM', 'notebook', 'portátil')),
+        item('ddr5-notebook', 'DDR5 Notebook', ramUse('DDR5', 'SO-DIMM', 'notebook', 'portátil')),
       ]),
       group('discos-duros', 'Discos duros', ['disco duro', 'hdd'], options(['desktop', 'Desktop', 'escritorio', '3.5'], ['notebook', 'Notebook', '2.5', '2,5'])),
       group('ssd', 'SSD', ['nvme', 'unidad estado sólido', 'unidad de estado sólido'], [
@@ -206,7 +214,7 @@ export const getCatalogSection = (id) => sections.get(id) ?? null;
 const contextCache = new WeakMap();
 function catalogContext(product) {
   if (!contextCache.has(product)) {
-    const kind = clean(String(product.tipo ?? '').trim() || product.nombre);
+    const kind = clean([String(product.tipo ?? '').trim() || product.nombre, profileForProduct(product).label].join(' '));
     const name = product.catalogoDemo ? product.nombre.split(' (')[0] : product.nombre;
     const attributes = productAttributes(product);
     const details = product.catalogoDemo
@@ -218,5 +226,8 @@ function catalogContext(product) {
 }
 
 export function matchesCatalogSection(product, section) {
-  return !section || section.match(catalogContext(product));
+  if (!section) return true;
+  const target = profileForSection(section);
+  const actual = target && profileForProduct(product);
+  return (!target || actual.id === 'general' || actual === target) && section.match(catalogContext(product));
 }

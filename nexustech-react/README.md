@@ -31,7 +31,7 @@ Los originales están en base-taller1, sin modificaciones, como referencia. La a
 
 - Catálogo, búsqueda sin distinguir tildes, categorías, presupuesto, orden y paginación.
 - Menú de departamentos y subcategorías que se combina con la búsqueda y los filtros técnicos.
-- Filtros técnicos que se adaptan a los resultados, con opciones y conteos para cada sección.
+- Filtros técnicos por tipo de producto, con valores y conteos que se actualizan según los resultados.
 - Tarjetas reutilizables, detalle, reseñas de ejemplo y selección de cantidad y acabado.
 - Detalle con ficha técnica y flechas para recorrer los productos de la búsqueda.
 - Favoritos con su propia pantalla.
@@ -74,7 +74,9 @@ En computadora, elige un departamento en la barra superior. En celular, abre **C
 
 El catálogo muestra **No hay productos relacionados a esto** cuando la búsqueda o los filtros no tienen coincidencias. Los departamentos sin publicaciones siguen disponibles en el menú. Si publicas un producto, indica el tipo y las características en **Datos para los filtros** para que aparezca en las secciones correspondientes.
 
-Busca **notebook** y abre **Filtros**. El panel muestra los campos que tienen datos entre los resultados. Por ejemplo, en **RAM** puedes seleccionar una cantidad mínima. Pulsa una etiqueta de filtro para quitar ese criterio.
+Busca **memoria RAM**, **RTX 4060** o **notebook** y abre **Filtros**. También puedes elegir **Tipo de producto** o entrar por el menú de departamentos. En **Computación → RAM → DDR4 Desktop**, el panel permite seleccionar capacidad, formato, frecuencia, voltaje y latencia. En **Computación → Tarjetas de video → NVIDIA GeForce**, cambia a GPU, VRAM, arquitectura, bus y largo.
+
+Cada selector ofrece los valores que tienen datos entre los resultados. Al pasar a otro tipo de producto, se quitan los filtros técnicos del anterior. Puedes quitar un criterio pulsando su etiqueta.
 
 Abre **Ver detalle** y usa las flechas para pasar al artículo anterior o siguiente sin cerrar la ventana. El recorrido respeta los filtros y el orden, incluso cuando el siguiente artículo está en otra página. En el formulario de publicación puedes añadir datos técnicos opcionales para que el producto aparezca en más filtros.
 
@@ -107,7 +109,7 @@ App.jsx conecta vistas, controlador y ventanas. Bootstrap se importa antes del C
 
 ## Datos y persistencia
 
-catalogConfig.json conserva los datos de generación del main.js original. createProducts produce los 2.400 objetos iniciales; no se insertan todos en el DOM a la vez.
+catalogConfig.json conserva los datos de generación del main.js original. createProducts produce los 2.400 objetos iniciales; no se insertan todos en el DOM a la vez. Las memorias RAM y las tarjetas de video de la demo usan fichas ficticias por tipo para probar los filtros.
 
 useShop conserva en localStorage, bajo nexustech-react-v2, las publicaciones añadidas, las eliminaciones, los favoritos, las líneas del carrito, los pedidos, el perfil y las consultas. El catálogo inicial se vuelve a generar y no se duplica completo en el almacenamiento.
 

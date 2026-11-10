@@ -4,9 +4,11 @@ import Button from '../ui/Button.jsx';
 import Icon from '../ui/Icon.jsx';
 import ProductImage from '../ui/ProductImage.jsx';
 import PriceDisplay from '../ui/PriceDisplay.jsx';
+import { productSpecHighlights } from '../../utils/productSpecs.js';
 
 // Los datos y las acciones pertenecen al padre; la tarjeta solo presenta el producto.
 export default memo(function ProductCard({ product, favorite, onFavorite, onDetail, onAdd, onDelete, onEditPrice, usdRate }) {
+  const highlights = productSpecHighlights(product);
   return <article className="nt-product-card">
     <div className="nt-product-photo">
       <button className="nt-photo-button" onClick={() => onDetail(product)} aria-label={'Ver detalle de ' + product.nombre}><ProductImage src={product.imagen} alt={product.nombre} loading="lazy" /></button>
@@ -18,6 +20,9 @@ export default memo(function ProductCard({ product, favorite, onFavorite, onDeta
     <div className="nt-product-body">
       <div className="nt-product-meta"><Badge tone="muted">{product.categoria}</Badge>{onEditPrice && <span>Tu publicación</span>}</div>
       <h3><button onClick={() => onDetail(product)} title={product.nombre}>{product.nombre}</button></h3>
+      {highlights.length > 0 && <ul className="nt-product-highlights" aria-label="Especificaciones principales">
+        {highlights.map((value) => <li key={value}>{value}</li>)}
+      </ul>}
       <p className="nt-product-seller"><Icon name="user" size={14} />{product.vendedor}</p>
       <div className="nt-product-price">
         <PriceDisplay amount={product.precio} usdRate={usdRate} />
