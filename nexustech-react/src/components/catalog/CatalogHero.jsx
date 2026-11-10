@@ -1,43 +1,70 @@
 import hero from "../../assets/images/laptop.jpg";
 import Badge from "../ui/Badge.jsx";
 import Icon from "../ui/Icon.jsx";
+import unabIsotipo from "../../assets/images/logos/isotipo-unab.png";
+import mastertechLogo from "../../assets/images/logos/logo-mastertech.png";
+
 export default function CatalogHero({ count, onPublish }) {
   return (
     <section className="nt-hero" aria-labelledby="catalogo-titulo">
       <div className="nt-hero-copy">
-        <Badge>TECNOLOGÍA PARA TU COMUNIDAD</Badge>
+        <div className="nt-hero-badges">
+          <span className="nt-academic-chip">
+            <img src={unabIsotipo} alt="UNAB" className="nt-mini-logo" />
+            <span>UNAB · TALLER DE INTEGRACIÓN 3</span>
+          </span>
+          <Badge variant="cyan">MARKETPLACE UNIVERSITARIO</Badge>
+        </div>
+
         <h1 id="catalogo-titulo">
           Tecnología que resuelve <span>problemas reales.</span>
         </h1>
         <p>
-          Encuentra hardware y soluciones informáticas en el marketplace de tu
-          campus.
+          Encuentra hardware, componentes y soluciones informáticas en el
+          marketplace de tu comunidad universitaria. Catálogo con persistencia
+          SQL y stock en tiempo real.
         </p>
+
         <div className="nt-hero-meta">
-          <span>
+          <span className="nt-meta-item">
             <Icon name="grid" size={17} />
-            <strong>{count.toLocaleString("es-CL")}</strong> publicaciones
-            consultadas
+            <span>
+              <strong>{count.toLocaleString("es-CL")}</strong> publicaciones disponibles
+            </span>
           </span>
-          <button onClick={onPublish}>
-            Comparte tu equipo
+          <button className="nt-hero-cta" onClick={onPublish}>
+            Publicar mi equipo
             <Icon name="arrow" size={16} />
           </button>
         </div>
       </div>
+
       <div className="nt-hero-visual">
-        <img
-          src={hero}
-          alt="Computadora portátil, imagen representativa del catálogo"
-        />
-        <div className="nt-hero-photo-note">
-          <span>PARA TU PRÓXIMO PROYECTO</span>
-          <strong>Encuentra tu siguiente equipo.</strong>
+        <div className="nt-hero-image-wrap">
+          <img
+            src={hero}
+            alt="Computadora portátil, imagen representativa del catálogo tecnológico"
+          />
+          <div className="nt-hero-photo-note">
+            <span>COMUNIDAD UNIVERSITARIA</span>
+            <strong>Encuentra tu próximo equipo informático.</strong>
+          </div>
         </div>
-        <div className="nt-hero-chip">
+
+        {/* Chips flotantes institucionales */}
+        <div className="nt-hero-chip nt-hero-chip-top">
           <Icon name="cpu" size={20} />
           <span>
-            Hardware & soluciones<small>Campus Hub UNAB</small>
+            Hardware & soluciones
+            <small>Campus Hub UNAB</small>
+          </span>
+        </div>
+
+        <div className="nt-hero-chip nt-hero-chip-bottom">
+          <img src={mastertechLogo} alt="MasterTech" className="nt-mini-logo-partner" />
+          <span>
+            Desarrollo Full Stack
+            <small>Apoyo MasterTech SpA</small>
           </span>
         </div>
       </div>

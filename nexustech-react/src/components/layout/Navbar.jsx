@@ -1,6 +1,9 @@
 import { useState } from "react";
 import Button from "../ui/Button.jsx";
 import Icon from "../ui/Icon.jsx";
+import unabIsotipo from "../../assets/images/logos/isotipo-unab.png";
+import mastertechLogo from "../../assets/images/logos/logo-mastertech.png";
+
 export default function Navbar({
   route,
   cartCount,
@@ -15,25 +18,59 @@ export default function Navbar({
     ["favoritos", "Favoritos"],
     ["rastreo", "Pedidos"],
     ["historial", "Actividad"],
+    ["contacto", "Contacto"],
   ];
+
   return (
     <header className="nt-header">
+      {/* Franja institucional superior UNAB / MasterTech */}
+      <aside className="nt-academic-ribbon" aria-label="Contexto institucional">
+        <div className="nt-ribbon-shell">
+          <div className="nt-ribbon-left">
+            <img
+              src={unabIsotipo}
+              alt="Isotipo Universidad Andrés Bello"
+              className="nt-ribbon-logo"
+            />
+            <span className="nt-ribbon-text">
+              <strong>Universidad Andrés Bello</strong>
+              <span className="nt-ribbon-sep">/</span>
+              <span>Facultad de Ingeniería</span>
+              <span className="nt-ribbon-sep">·</span>
+              <span className="nt-ribbon-pill">Taller de Integración 3</span>
+            </span>
+          </div>
+          <div className="nt-ribbon-right">
+            <span className="nt-ribbon-partner">
+              <img
+                src={mastertechLogo}
+                alt="Emblema MasterTech"
+                className="nt-ribbon-partner-logo"
+              />
+              <span>Desarrollado con apoyo de <strong>MasterTech SpA</strong></span>
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Barra de navegación principal NexusTech */}
       <div className="nt-nav-shell">
         <a
           className="nt-brand"
           href="#/catalogo"
-          aria-label="NexusTech, inicio"
+          aria-label="NexusTech Campus Marketplace, ir al inicio"
         >
           <span className="nt-brand-mark">
-            <Icon name="cpu" size={25} />
+            <Icon name="cpu" size={24} />
           </span>
-          <span>
+          <span className="nt-brand-text">
             <strong>
               NEXUS<span>TECH</span>
             </strong>
-            <small>CAMPUS MARKETPLACE</small>
+            <small>CAMPUS MARKETPLACE · UNAB</small>
           </span>
         </a>
+
         <nav
           className={"nt-navigation" + (open ? " is-open" : "")}
           id="nexus-menu"
@@ -47,9 +84,9 @@ export default function Navbar({
               onClick={() => setOpen(false)}
             >
               {label}
-              {value === "favoritos" && favoriteCount
-                ? ` (${favoriteCount})`
-                : ""}
+              {value === "favoritos" && favoriteCount > 0 && (
+                <span className="nt-nav-pill">{favoriteCount}</span>
+              )}
             </a>
           ))}
           <a
@@ -57,31 +94,45 @@ export default function Navbar({
             className="nt-mobile-auth"
             onClick={() => setOpen(false)}
           >
-            Mi cuenta
+            {user ? "Mi cuenta (" + user.name + ")" : "Ingresar / Registro"}
           </a>
         </nav>
+
         <div className="nt-nav-actions">
-          <Button variant="secondary" icon="plus" onClick={onPublish}>
+          <Button
+            variant="secondary"
+            icon="plus"
+            onClick={onPublish}
+            className="nt-btn-publish"
+          >
             Publicar
           </Button>
+
           <Button
             icon="cart"
             aria-label={"Abrir carrito, " + cartCount + " unidades"}
             onClick={onCart}
+            className="nt-btn-cart"
           >
             <span className="nt-cart-label">Carrito</span>
             <span className="nt-count">{cartCount}</span>
           </Button>
-          <a className="nt-auth-link" href="#/acceso">
+
+          <a
+            className="nt-auth-link"
+            href="#/acceso"
+            aria-label={user ? "Mi cuenta: " + user.name : "Iniciar sesión o registrarse"}
+          >
             {user ? (
               <>
                 <span className="nt-avatar">{user.name[0].toUpperCase()}</span>
                 <span className="nt-account-label">Mi cuenta</span>
               </>
             ) : (
-              "Ingresar"
+              <span className="nt-login-cta">Ingresar</span>
             )}
           </a>
+
           <Button
             variant="ghost"
             icon={open ? "close" : "menu"}
