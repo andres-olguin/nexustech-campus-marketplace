@@ -106,3 +106,61 @@ test("External abort remains AbortError instead of showing service failure", asy
     (e) => e.name === "AbortError",
   );
 });
+
+test("Reviews endpoint validates product UUID, Bearer header and schema", async () => {
+  const validId = "11111111-1111-4111-8111-111111111111";
+  const userId = "22222222-2222-4222-8222-222222222222";
+  const reviewId = "33333333-3333-4333-8333-333333333333";
+  let lastRequest;
+  const api = createApiClient({
+    fetchImpl: async (url, options) => {
+      lastRequest = { url, ...options };
+      if (options.method === "POST") {
+        return json(
+          {
+            id: reviewId,
+            productId: validId,
+            userId,
+            rating: 5,
+            title: "Buen equipo",
+            comment: "Rendimiento sólido en laboratorio.",
+            featuresEvaluated: ["Rendimiento"],
+            createdAt: "2026-11-10T01:00:00.000Z",
+          },
+          201,
+        );
+      }
+      return json({
+        items: [
+          {
+            id: reviewId,
+            productId: validId,
+            userId,
+            rating: 5,
+            title: "Buen equipo",
+            comment: "Rendimiento sólido en laboratorio.",
+            createdAt: "2026-11-10T01:00:00.000Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 5,
+      });
+    },
+  });
+  assert.throws(
+    () => api.reviews("invalid-id"),
+    (e) => e.status === 400,
+  );
+  const page = await api.reviews(validId, 1);
+  assert.equal(page.items.length, 1);
+  api.setToken("signed.jwt.token");
+  const created = await api.createReview(validId, {
+    rating: 5,
+    title: "Buen equipo",
+    comment: "Rendimiento sólido en laboratorio.",
+    featuresEvaluated: ["Rendimiento"],
+  });
+  assert.equal(created.rating, 5);
+  assert.equal(lastRequest.headers.Authorization, "Bearer signed.jwt.token");
+});
