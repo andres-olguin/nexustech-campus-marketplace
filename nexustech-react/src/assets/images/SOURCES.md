@@ -34,11 +34,17 @@ Listado de archivos locales (`producto-00.jpg` a `producto-20.jpg` y `laptop.jpg
 - `logo-mastertech.png`: Emblema MasterTech SpA — referencia de apoyo metodológico/técnico secundario.
 
 ## Ilustraciones Vectoriales Representativas (`src/assets/images/illustrations/`)
-Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, licencia propia del proyecto) para categorías sin fotografía específica verificable, evitando asignar fotos erróneas de otros componentes:
-- `smartphone.svg`: Ilustración representativa de smartphone.
-- `printer.svg`: Ilustración representativa de impresora y multifuncional.
-- `charger.svg`: Ilustración representativa de cargadores GaN y fuentes de energía.
-- `webcam.svg`: Ilustración representativa de cámaras web y streaming.
-- `psu-cooling.svg`: Ilustración representativa de fuentes de poder y sistemas de refrigeración.
-- `accessories.svg`: Ilustración representativa de hubs USB-C y adaptadores.
-- `speaker.svg`: Ilustración representativa de monitores de estudio y parlantes.
+Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, licencia propia del proyecto) para categorías y subcategorías sin fotografía específica verificable, evitando asignar fotos erróneas de otros componentes:
+- `smartphone.svg` / `smartphone-pro.svg`: Ilustraciones representativas de smartphones estándar y gama alta/dev.
+- `printer.svg` / `printer-3d.svg` / `scanner-labeler.svg`: Impresoras tradicionales, impresoras 3D/filamentos y escáneres/etiquetadoras.
+- `charger.svg` / `powerbank.svg`: Cargadores GaN, regletas y power banks / UPS.
+- `webcam.svg`: Cámaras web, proyectores y kits de iluminación streaming.
+- `psu-cooling.svg` / `pc-case.svg`: Fuentes de poder, refrigeración líquida/aire y gabinetes PC.
+- `accessories.svg`: Hubs USB-C, docking stations, cables y adaptadores.
+- `speaker.svg`: Monitores de audio activos, parlantes e interfaces.
+- `hdd-external.svg` / `pendrive-sd.svg`: Discos duros externos/internos, pendrives y tarjetas SD/microSD.
+- `monitor-ultrawide.svg` / `monitor-portable.svg`: Monitores ultrawide curvos, pantallas portátiles y brazos articulados.
+- `router-wifi.svg` / `network-tools.svg`: Routers Wi-Fi 6/7, Mesh, cables consola y herramientas de red.
+- `laptop-stand.svg` / `laptop-bag.svg`: Soportes ergonómicos, bases refrigerantes, fundas y mochilas.
+- `tools-electronics.svg`: Multímetros, kits de precisión, calculadoras y pasta térmica.
+- `tablet-ereader.svg`: E-readers de tinta electrónica y tabletas digitalizadoras.

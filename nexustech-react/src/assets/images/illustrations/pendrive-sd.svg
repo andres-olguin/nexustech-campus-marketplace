@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 320" width="500" height="320">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#04132e"/><stop offset="100%" stop-color="#0c2452"/></linearGradient></defs>
+  <rect width="500" height="320" fill="url(#bg)"/>
+  
+    <rect x="145" y="110" width="90" height="105" rx="8" fill="#0f2b5c" stroke="#00d2ff" stroke-width="3"/>
+    <rect x="165" y="78" width="50" height="32" rx="3" fill="#94a3b8"/>
+    <rect x="175" y="88" width="10" height="10" fill="#03102c"/><rect x="195" y="88" width="10" height="10" fill="#03102c"/>
+    <path d="M275 95 H335 L350 115 V215 H275 Z" fill="#0f2b5c" stroke="#38bdf8" stroke-width="3"/>
+    <rect x="290" y="130" width="45" height="60" rx="4" fill="#03102c" stroke="#00d2ff" stroke-width="1.5"/>
+  
+  <text x="250" y="290" text-anchor="middle" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="12" font-weight="600">ILUSTRACIÓN REPRESENTATIVA · PENDRIVE / TARJETA SD</text>
+</svg>

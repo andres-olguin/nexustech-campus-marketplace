@@ -49,7 +49,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 22000,
     stock: 6,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Convierte cualquier SSD M.2 NVMe en una unidad externa ultrarrápida para respaldos de tesis y laboratorios.",
     specs: ["USB 3.2 Gen2 (10 Gbps)", "Carcasa aluminio disipadora", "Cable USB-C a USB-C/A", "Instalación sin herramientas"],
     reviews: []
@@ -62,7 +62,7 @@ export const part2Products = [
     condition: "Usado",
     price: 68000,
     stock: 2,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Unidad compacta con salud SMART al 98% comprobada, perfecta para transportar máquinas virtuales entre casa y campus.",
     specs: ["Capacidad 1 TB", "Salud SMART 98%", "Conector USB-C", "Resistencia a golpes leves"],
     reviews: []
@@ -75,7 +75,7 @@ export const part2Products = [
     condition: "Usado",
     price: 29000,
     stock: 4,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Unidad extraída de upgrade de notebook, formateada y lista para usar como disco externo rápido.",
     specs: ["256 GB NVMe", "Case incluido", "Cable USB incluido", "Formateado exFAT"],
     reviews: []
@@ -101,7 +101,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 65000,
     stock: 5,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Respaldo masivo económico para fotos, grabaciones de clases, máquinas virtuales archivadas e ISOs.",
     specs: ["2 TB capacidad", "USB 3.2 Gen 1", "No requiere fuente externa", "Incluye cable trenzado"],
     reviews: []
@@ -114,7 +114,7 @@ export const part2Products = [
     condition: "Usado",
     price: 75000,
     stock: 3,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Tecnología CMR apta para arreglos RAID, servidores locales o biblioteca multimedia; cero sectores reasignados.",
     specs: ["4 TB tecnología CMR", "7200 RPM / 256 MB caché", "Salud SMART 100%", "Uso ~4200 horas"],
     reviews: []
@@ -127,7 +127,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 14500,
     stock: 14,
-    imgKey: "ssdStorage",
+    imgKey: "pendriveSd",
     description: "Transfiere presentaciones y proyectos directo entre smartphones, tablets y computadores de sala sin adaptadores.",
     specs: ["128 GB", "Conector reversible USB-C + USB 3.1", "Cuerpo metálico giratorio", "Lectura hasta 150 MB/s"],
     reviews: [
@@ -142,7 +142,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 21000,
     stock: 9,
-    imgKey: "ssdStorage",
+    imgKey: "pendriveSd",
     description: "Clasificación A2 ideal para sistemas operativos en Raspberry Pi, tablets, drones y cámaras.",
     specs: ["256 GB Clase A2 / V30", "Lectura 130 MB/s", "Adaptador SD incluido", "Resistente al agua y temperatura"],
     reviews: []
@@ -155,7 +155,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 162000,
     stock: 2,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Edita video 4K directamente desde la unidad externa sin copiar archivos al disco interno.",
     specs: ["2 TB SSD", "Velocidad hasta 2000 MB/s", "Carcasa aluminio engomada", "Cables USB-C y USB-A"],
     reviews: []
@@ -181,7 +181,7 @@ export const part2Products = [
     condition: "Usado",
     price: 28000,
     stock: 2,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Permite leer dos discos SATA por USB 3.0 o clonar discos offline con un botón.",
     specs: ["2 bahías 2.5\" y 3.5\"", "Clonación offline sin PC", "USB 3.0 UASP", "Fuente 12V incluida"],
     reviews: []
@@ -194,7 +194,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 9900,
     stock: 12,
-    imgKey: "ssdStorage",
+    imgKey: "pendriveSd",
     description: "Unidad rápida ideal para tener Ventoy con tus distribuciones Linux y herramientas de rescate.",
     specs: ["64 GB USB 3.2", "Carcasa compacta sin tapa", "Lectura 120 MB/s", "LED indicador actividad"],
     reviews: []
@@ -220,7 +220,7 @@ export const part2Products = [
     condition: "Usado",
     price: 89000,
     stock: 2,
-    imgKey: "ssdStorage",
+    imgKey: "hddExternal",
     description: "Gran capacidad de respaldo en formato de bolsillo; verificado sin sectores dañados.",
     specs: ["4 TB USB 3.0", "Incluye funda protectora", "SMART limpio 100%", "Cable original"],
     reviews: []
@@ -233,7 +233,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 42000,
     stock: 4,
-    imgKey: "ssdStorage",
+    imgKey: "pendriveSd",
     description: "Doble fila de pines UHS-II para ráfagas rápidas en cámaras y grabación de proyectos audiovisuales.",
     specs: ["128 GB V60 UHS-II", "Lectura hasta 280 MB/s", "Escritura sostenida 100+ MB/s", "Estuche plástico"],
     reviews: []
@@ -246,7 +246,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 7500,
     stock: 10,
-    imgKey: "ssdStorage",
+    imgKey: "psuCooling",
     description: "Reduce hasta 15°C la temperatura de unidades NVMe Gen4 en placas madre sin disipador integrado.",
     specs: ["Aluminio ranurado CNC", "2 pads térmicos incluidos", "Para M.2 2280 simple/doble cara", "Fijación con clips"],
     reviews: []
@@ -315,7 +315,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 139000,
     stock: 4,
-    imgKey: "monitor",
+    imgKey: "monitorPortable",
     description: "Segunda pantalla ultrafina para trabajar en proyectos grupales dentro de la sede universitaria.",
     specs: ["15.6\" IPS FHD", "Grosor 6mm / 780g", "Funda magnética soporte", "Mini HDMI + 2x USB-C"],
     reviews: []
@@ -328,7 +328,7 @@ export const part2Products = [
     condition: "Usado",
     price: 185000,
     stock: 1,
-    imgKey: "monitor",
+    imgKey: "monitorUltrawide",
     description: "Formato panorámico ideal para dividir pantalla en dos ventanas completas sin usar doble monitor.",
     specs: ["29\" 2560x1080 (21:9)", "Panel IPS antirreflejo", "2x HDMI + DisplayPort", "Sin píxeles muertos"],
     reviews: []
@@ -380,7 +380,7 @@ export const part2Products = [
     condition: "Usado",
     price: 380000,
     stock: 1,
-    imgKey: "monitor",
+    imgKey: "monitorUltrawide",
     description: "Curvatura 1500R envolvente equivalente a casi dos monitores QHD sin marco central.",
     specs: ["34\" 3440x1440", "144Hz / Curvatura 1500R", "2x HDMI + 2x DisplayPort", "Soporte VESA compatible"],
     reviews: [
@@ -395,7 +395,7 @@ export const part2Products = [
     condition: "Usado",
     price: 155000,
     stock: 2,
-    imgKey: "monitor",
+    imgKey: "monitorPortable",
     description: "Panel IPS táctil capacitivo de 10 puntos ideal para probar apps móviles o exponer.",
     specs: ["14\" FHD IPS táctil", "Cable USB-C único", "Peso 650g", "Altavoces integrados básicos"],
     reviews: []
@@ -460,7 +460,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 179000,
     stock: 2,
-    imgKey: "monitor",
+    imgKey: "monitorUltrawide",
     description: "Negros profundos con relación de contraste 3000:1 y curvatura sutil 1800R.",
     specs: ["27\" FHD 180Hz", "Contraste 3000:1", "2x HDMI + 1x DP", "Filtro parpadeo Flicker-Free"],
     reviews: []
@@ -486,7 +486,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 189000,
     stock: 2,
-    imgKey: "monitor",
+    imgKey: "monitorPortable",
     description: "Pantalla portátil grande para trabajar cómodamente fuera de casa sin perder área visual.",
     specs: ["17.3\" IPS FHD", "2x USB-C + Mini HDMI", "Funda protectora incluida", "Peso 1.05 kg"],
     reviews: []
@@ -752,7 +752,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 18500,
     stock: 6,
-    imgKey: "mouse",
+    imgKey: "accessories",
     description: "Controla diapositivas de PowerPoint/Google Slides a distancia hasta 20 metros durante exposiciones en sala.",
     specs: ["Alcance 20 metros", "Receptor dual USB-A/USB-C", "Puntero rojo integrado", "Botón pantalla negra"],
     reviews: []
@@ -843,7 +843,7 @@ export const part2Products = [
     condition: "Nuevo",
     price: 36000,
     stock: 3,
-    imgKey: "keyboard",
+    imgKey: "accessories",
     description: "Configura atajos de Git, debugging, timeline de edición o volumen mediante software QMK/VIA.",
     specs: ["6 teclas mecánicas + encoder", "Compatible QMK/VIA", "Memoria interna", "Conexión USB-C"],
     reviews: []

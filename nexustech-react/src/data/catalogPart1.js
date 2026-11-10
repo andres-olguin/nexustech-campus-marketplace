@@ -804,7 +804,7 @@ export const part1Products = [
     condition: "Nuevo",
     price: 9500,
     stock: 15,
-    imgKey: "cpuChip",
+    imgKey: "toolsElectronics",
     description: "Compuesto térmico de baja viscosidad para mantenimiento preventivo de notebooks y GPUs.",
     specs: ["Jeringa 4 gramos", "Conductividad 12.5 W/mK", "No conductora eléctrica", "Incluye espátula"],
     reviews: []
@@ -843,7 +843,7 @@ export const part1Products = [
     condition: "Nuevo",
     price: 62000,
     stock: 3,
-    imgKey: "gpuRig",
+    imgKey: "pcCase",
     description: "Buen flujo de aire frontal con filtros magnéticos antipolvo superior e inferior.",
     specs: ["Soporte ATX/mATX/ITX", "GPU hasta 340mm", "2x USB 3.0 + USB-C frontal", "3 ventiladores incluidos"],
     reviews: []
@@ -856,7 +856,7 @@ export const part1Products = [
     condition: "Usado",
     price: 39000,
     stock: 2,
-    imgKey: "miniPc",
+    imgKey: "pcCase",
     description: "Diseño sobrio para escritorio de estudio; sin rayaduras en panel lateral.",
     specs: ["Formato Micro-ATX", "2 ventiladores silenciosos", "Compartimento PSU oculto", "Filtro polvo incluido"],
     reviews: []
@@ -908,7 +908,7 @@ export const part1Products = [
     condition: "Nuevo",
     price: 16000,
     stock: 6,
-    imgKey: "cpuChip",
+    imgKey: "toolsElectronics",
     description: "Módulo de seguridad hardware dedicado para cifrado BitLocker o prácticas de criptografía.",
     specs: ["Estándar TPM 2.0", "Interfaz SPI 14 pines", "Compatible con placas compatibles", "Tamaño compacto"],
     reviews: []

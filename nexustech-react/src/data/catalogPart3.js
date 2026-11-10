@@ -8,7 +8,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 325000,
     stock: 3,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Equipo liberado para todas las compañías en Chile con carga rápida y excelente autonomía para uso universitario diario.",
     specs: ["Pantalla 6.67\" AMOLED 120Hz", "256 GB almacenamiento / 8 GB RAM", "Batería 5000 mAh / Carga 67W", "Dual SIM + 5G"],
     reviews: [
@@ -51,7 +51,7 @@ export const part3Products = [
     condition: "Usado",
     price: 460000,
     stock: 1,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Equipo flagship de generación anterior en estado impecable con modo escritorio por cable HDMI/USB-C.",
     specs: ["12 GB RAM / 256 GB UFS", "Salida video USB-C DP Alt Mode", "Triple cámara teleobjetivo", "Incluye carcasa"],
     reviews: []
@@ -103,7 +103,7 @@ export const part3Products = [
     condition: "Usado",
     price: 580000,
     stock: 1,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Almacenamiento amplio de 512 GB ideal para grabar material audiovisual de proyectos universitarios.",
     specs: ["512 GB almacenamiento", "Grabación 4K@60fps estabilizada", "Pantalla LTPO 1-120Hz", "Batería 94%"],
     reviews: []
@@ -129,7 +129,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 360000,
     stock: 2,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Soporte Dual SIM + eSIM para viajar o separar línea personal de proyectos.",
     specs: ["Soporte eSIM + NanoSIM", "256 GB / 8 GB RAM", "Carga inalámbrica 15W", "Estabilización óptica OIS"],
     reviews: []
@@ -142,7 +142,7 @@ export const part3Products = [
     condition: "Usado",
     price: 270000,
     stock: 2,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Equipo mantenido en versión actualizada para testeo de apps móviles responsive e interfaces WebKit.",
     specs: ["128 GB", "Batería 88% condición", "FaceID operativo", "Incluye cable USB-C"],
     reviews: []
@@ -194,7 +194,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 495000,
     stock: 2,
-    imgKey: "smartphone",
+    imgKey: "smartphonePro",
     description: "Gran memoria RAM para ejecutar aplicaciones pesadas, emulación y multitarea sin recargas.",
     specs: ["12 GB LPDDR5X / 512 GB UFS 4.0", "Carga rápida 80W", "Wi-Fi 7 ready", "Refrigeración cámara vapor"],
     reviews: []
@@ -250,7 +250,7 @@ export const part3Products = [
     condition: "Usado",
     price: 38000,
     stock: 3,
-    imgKey: "tabletTouch",
+    imgKey: "tabletEreader",
     description: "Conecta a tu notebook para dibujar diagramas UML, circuitos o fórmulas en pizarras virtuales.",
     specs: ["Área activa 10x6 pulgadas", "8192 niveles de presión", "Lápiz sin batería", "Compatible Win/Mac/Linux"],
     reviews: []
@@ -289,7 +289,7 @@ export const part3Products = [
     condition: "Usado",
     price: 185000,
     stock: 2,
-    imgKey: "tabletTouch",
+    imgKey: "tabletEreader",
     description: "Pantalla E-Ink de casi 8 pulgadas que permite leer papers académicos y libros técnicos bajo luz solar.",
     specs: ["Pantalla E-Ink 300 PPI", "Luz cálida ajustable", "32 GB almacenamiento", "Autonomía semanas"],
     reviews: [
@@ -317,7 +317,7 @@ export const part3Products = [
     condition: "Usado",
     price: 195000,
     stock: 1,
-    imgKey: "tabletTouch",
+    imgKey: "tabletEreader",
     description: "Monitor interactivo para diseño digital, ilustración, modelado 3D y anotación directa sobre pantalla.",
     specs: ["Pantalla laminada 13.3\" FHD", "8 teclas rápidas laterales", "Lápiz sin batería + 8 puntas", "Cable 3-en-1 / USB-C"],
     reviews: []
@@ -369,7 +369,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 26000,
     stock: 6,
-    imgKey: "tabletTouch",
+    imgKey: "tabletEreader",
     description: "Cabe junto al notebook en cualquier mesa para resolver integrales o firmar documentos en pizarra digital.",
     specs: ["Área 6x4 pulgadas", "Peso 200g ultrafina", "Lápiz pasivo sin pilas", "USB-C incluido"],
     reviews: []
@@ -382,7 +382,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 112000,
     stock: 3,
-    imgKey: "tabletTouch",
+    imgKey: "tabletEreader",
     description: "Lectura cómoda en transporte público sin reflejos y batería que dura semanas.",
     specs: ["6\" 300 PPI antirreflejo", "16 GB almacenamiento", "USB-C", "Soporte EPUB/PDF"],
     reviews: []
@@ -436,7 +436,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 69000,
     stock: 5,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Mejora la estabilidad en videollamadas y descargas con soporte OFDMA y 4 puertos Gigabit LAN.",
     specs: ["Wi-Fi 6 AX3000", "4 puertos Gigabit LAN", "Soporte WPA3", "Modo Router / Access Point"],
     reviews: []
@@ -490,7 +490,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 94000,
     stock: 3,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Elimina zonas muertas en departamentos compartidos de varios dormitorios con roaming transparente.",
     specs: ["2 nodos AX1800 Wi-Fi 6", "Cobertura hasta 320 m²", "2 puertos Gigabit por nodo", "App gestión sencilla"],
     reviews: []
@@ -516,7 +516,7 @@ export const part3Products = [
     condition: "Usado",
     price: 78000,
     stock: 2,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Listo para laboratorios de redes, túneles WireGuard, AdGuard/DNS local y QoS CAKE anti-bufferbloat.",
     specs: ["Firmware OpenWrt estable", "Aceleración hardware WireGuard", "Wi-Fi 6 AX3000", "5 puertos Gigabit"],
     reviews: []
@@ -529,7 +529,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 12500,
     stock: 10,
-    imgKey: "networkSwitch",
+    imgKey: "networkTools",
     description: "Indispensable en ramos de infraestructura de redes para configurar routers y switches por puerto serie.",
     specs: ["Chipset FTDI genuino", "1.8 metros plano flexible", "Compatible Windows 11/Linux/macOS", "Sin adaptador DB9 extra"],
     reviews: [
@@ -544,7 +544,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 24000,
     stock: 5,
-    imgKey: "networkSwitch",
+    imgKey: "networkTools",
     description: "Kit completo de armado y certificación básica de patch cords Cat5e/Cat6 para proyectos.",
     specs: ["Crimpadora corte automático", "Tester RJ45/RJ11 batería 9V", "50 conectores Cat6 pass-through", "Estuche cierre"],
     reviews: []
@@ -583,7 +583,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 16000,
     stock: 8,
-    imgKey: "networkSwitch",
+    imgKey: "networkTools",
     description: "Cables certificados hasta 10Gbps en tramos cortos, ideales para homelabs y racks.",
     specs: ["5 unidades de 1.5 metros", "Categoría 6A 10GbE", "Cobre 100% puro 26AWG", "Botas anti-enganche"],
     reviews: []
@@ -596,7 +596,7 @@ export const part3Products = [
     condition: "Usado",
     price: 38000,
     stock: 2,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Comparte internet con hasta 10 dispositivos mediante tarjeta SIM en lugares sin cobertura Wi-Fi.",
     specs: ["Liberado bandas chilenas 4G", "Batería 2100 mAh (~7h)", "Hasta 10 equipos Wi-Fi", "Carga Micro-USB"],
     reviews: []
@@ -622,7 +622,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 115000,
     stock: 2,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Punto de acceso profesional con soporte múltiples SSID y VLAN por red inalámbrica.",
     specs: ["AX1800 / AX3000", "Alimentación PoE 802.3at (inyector incluido)", "Hasta 8 SSIDs con VLAN", "Montaje pared/techo"],
     reviews: []
@@ -661,7 +661,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 280000,
     stock: 0,
-    imgKey: "networkSwitch",
+    imgKey: "routerWifi",
     description: "Router de nueva generación con canales de 320 MHz temporalmente agotado.",
     specs: ["Wi-Fi 7 Tri-banda", "Puertos 2.5GbE WAN/LAN", "MLO Multi-Link", "WPA3"],
     reviews: []
@@ -717,7 +717,7 @@ export const part3Products = [
     condition: "Usado",
     price: 175000,
     stock: 1,
-    imgKey: "printer",
+    imgKey: "printer3d",
     description: "Impresora 3D calibrada con cama magnética PEI, ideal para prototipos de robótica, carcasas Arduino y maquetas.",
     specs: ["Volumen 220x220x250 mm", "Extrusor directo + cama PEI", "Auto-nivelación BLTouch/CRTouch", "Incluye 1/2 rollo PLA"],
     reviews: [
@@ -732,7 +732,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 28000,
     stock: 6,
-    imgKey: "printer",
+    imgKey: "scannerLabeler",
     description: "Organiza cables de red, cajas de componentes electrónicos, apuntes y cuadernos desde el celular.",
     specs: ["Impresión térmica sin tinta", "Bluetooth iOS/Android", "Incluye 2 rollos etiquetas", "Batería recargable USB-C"],
     reviews: []
@@ -745,7 +745,7 @@ export const part3Products = [
     condition: "Usado",
     price: 72000,
     stock: 2,
-    imgKey: "printer",
+    imgKey: "scannerLabeler",
     description: "Digitaliza apuntes manuscritos, libros o boletas directo a PDF buscable (OCR).",
     specs: ["Escaneo 15 ppm color/BN", "Alimentador hojas sueltas", "Salida directa PDF", "Compacto para mochila"],
     reviews: []
@@ -771,7 +771,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 89000,
     stock: 2,
-    imgKey: "printer",
+    imgKey: "scannerLabeler",
     description: "Imprime informes de emergencia tamaño carta/A4 en papel térmico sin usar cartuchos de tinta.",
     specs: ["Soporte A4 y Carta", "Bluetooth + USB-C", "Peso 720g", "Incluye 50 hojas térmicas"],
     reviews: []
@@ -784,7 +784,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 42000,
     stock: 5,
-    imgKey: "printer",
+    imgKey: "printer3d",
     description: "Sellados al vacío con desecante; baja deformación para piezas mecánicas estudiantiles.",
     specs: ["3 bobinas x 1 kg (3 kg total)", "Diámetro 1.75mm ±0.02mm", "Sellado al vacío", "Temp. impresión 200-220°C"],
     reviews: []
@@ -810,7 +810,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 24000,
     stock: 4,
-    imgKey: "printer",
+    imgKey: "printer3d",
     description: "Útil para reparar piezas impresas en 3D o crear maquetas rápidas a mano alzada.",
     specs: ["Control temperatura OLED", "Velocidad regulable", "Alimentación USB", "Incluye 10 colores PLA"],
     reviews: []
@@ -879,7 +879,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 16500,
     stock: 12,
-    imgKey: "laptopSilver",
+    imgKey: "laptopStand",
     description: "Eleva la pantalla a altura de los ojos, mejora la postura y favorece la ventilación inferior del equipo.",
     specs: ["Aluminio anodizado", "6 niveles de inclinación", "Plegable con bolsa transporte", "Soporta hasta 17 pulgadas"],
     reviews: []
@@ -892,7 +892,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 18000,
     stock: 8,
-    imgKey: "laptopPro",
+    imgKey: "laptopBag",
     description: "Protección interior de felpa suave contra rayones y salpicaduras durante el traslado diario.",
     specs: ["Interior felpa anti-rayas", "Exterior repelente al agua", "Bolsillo frontal para cargador", "Cierre doble reforzado"],
     reviews: []
@@ -933,7 +933,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 48000,
     stock: 5,
-    imgKey: "charger",
+    imgKey: "powerbank",
     description: "Batería externa de alta salida capaz de dar una carga extra de emergencia a tu laptop cuando no hay enchufes libres.",
     specs: ["20.000 mAh / 74 Wh (apta avión)", "Salida USB-C hasta 65W", "Display LED porcentaje", "2x USB-C + 1x USB-A"],
     reviews: []
@@ -946,7 +946,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 34000,
     stock: 6,
-    imgKey: "accessories",
+    imgKey: "laptopBag",
     description: "Diseño sobrio resistente al agua con múltiples compartimentos para cables, mouse, tablet y botella.",
     specs: ["Bolsillo laptop 15.6\" acolchado", "Tela impermeable poliéster", "Bolsillo oculto espalda", "Correa para maleta"],
     reviews: []
@@ -959,7 +959,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 19500,
     stock: 9,
-    imgKey: "charger",
+    imgKey: "powerbank",
     description: "Protección contra picos de voltaje para tu escritorio de estudio con interruptor general iluminado.",
     specs: ["6 enchufes norma chilena", "Protección sobretensión 900J", "3 puertos USB carga lenta", "Cable grueso 1.8m"],
     reviews: []
@@ -972,7 +972,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 36000,
     stock: 4,
-    imgKey: "monitor",
+    imgKey: "monitorPortable",
     description: "Libera completamente el escritorio y permite girar o ajustar la altura del monitor con un dedo.",
     specs: ["Soporta 2 a 9 kg", "VESA 75x75 y 100x100", "Rotación 360° vertical/horizontal", "Prensa escritorio o pasacables"],
     reviews: []
@@ -985,7 +985,7 @@ export const part3Products = [
     condition: "Usado",
     price: 18000,
     stock: 3,
-    imgKey: "laptopDark",
+    imgKey: "laptopStand",
     description: "Malla metálica con 5 alturas regulables y dos ventiladores grandes de 140mm de bajo ruido.",
     specs: ["2x ventiladores 140mm", "5 ángulos inclinación", "2 puertos USB passthrough", "Rejilla metálica"],
     reviews: []
@@ -1050,7 +1050,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 29000,
     stock: 4,
-    imgKey: "monitor",
+    imgKey: "monitorPortable",
     description: "Ilumina el teclado y cuadernos sobre el escritorio por asimetría óptica sin deslumbrar el monitor.",
     specs: ["Óptica asimétrica antirreflejo", "Control táctil brillo y color", "Alimentación USB-C", "Para monitores de 0.5 a 4 cm"],
     reviews: [
@@ -1078,7 +1078,7 @@ export const part3Products = [
     condition: "Usado",
     price: 25000,
     stock: 2,
-    imgKey: "analytics",
+    imgKey: "toolsElectronics",
     description: "Matrices, complejos, estadística e integrales numéricas; permitida en evaluaciones presenciales sin Wi-Fi.",
     specs: ["Pantalla natural 4 líneas", "Cálculo matricial y complejo", "Tapa rígida deslizante", "Pila nueva"],
     reviews: []
@@ -1091,7 +1091,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 16000,
     stock: 6,
-    imgKey: "accessories",
+    imgKey: "toolsElectronics",
     description: "Incluye puntas Torx T5/T6, Phillips 000, Pentalobe y uñetas plásticas para abrir notebooks y consolas sin dañar clips.",
     specs: ["48 puntas acero S2", "Caja aluminio magnética", "Incluye palanca apertura", "Mango giratorio"],
     reviews: []
@@ -1130,7 +1130,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 23000,
     stock: 4,
-    imgKey: "motherboard",
+    imgKey: "toolsElectronics",
     description: "Mide voltaje AC/DC, resistencia, continuidad con buzzer y capacitancia para prototipos Arduino/IoT.",
     specs: ["Autorango 4000 cuentas", "Medición continuidad sonora", "Pantalla retroiluminada", "Funda goma protectora"],
     reviews: []
@@ -1143,7 +1143,7 @@ export const part3Products = [
     condition: "Nuevo",
     price: 54000,
     stock: 0,
-    imgKey: "charger",
+    imgKey: "powerbank",
     description: "Respaldo de batería para PC y router ante cortes de luz temporalmente agotado.",
     specs: ["650VA / 390W", "4 tomas respaldo + AVR", "Protección picos", "Puerto USB monitoreo"],
     reviews: []

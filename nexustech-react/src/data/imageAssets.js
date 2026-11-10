@@ -27,15 +27,45 @@ import illWebcam from '../assets/images/illustrations/webcam.svg';
 import illPsuCooling from '../assets/images/illustrations/psu-cooling.svg';
 import illAccessories from '../assets/images/illustrations/accessories.svg';
 import illSpeaker from '../assets/images/illustrations/speaker.svg';
+import illHddExternal from '../assets/images/illustrations/hdd-external.svg';
+import illPendriveSd from '../assets/images/illustrations/pendrive-sd.svg';
+import illMonitorUltrawide from '../assets/images/illustrations/monitor-ultrawide.svg';
+import illMonitorPortable from '../assets/images/illustrations/monitor-portable.svg';
+import illPrinter3d from '../assets/images/illustrations/printer-3d.svg';
+import illScannerLabeler from '../assets/images/illustrations/scanner-labeler.svg';
+import illRouterWifi from '../assets/images/illustrations/router-wifi.svg';
+import illNetworkTools from '../assets/images/illustrations/network-tools.svg';
+import illLaptopStand from '../assets/images/illustrations/laptop-stand.svg';
+import illLaptopBag from '../assets/images/illustrations/laptop-bag.svg';
+import illPowerbank from '../assets/images/illustrations/powerbank.svg';
+import illToolsElectronics from '../assets/images/illustrations/tools-electronics.svg';
+import illTabletEreader from '../assets/images/illustrations/tablet-ereader.svg';
+import illPcCase from '../assets/images/illustrations/pc-case.svg';
+import illSmartphonePro from '../assets/images/illustrations/smartphone-pro.svg';
 
 export const illustrations = {
   smartphone: illSmartphone,
+  smartphonePro: illSmartphonePro,
   printer: illPrinter,
+  printer3d: illPrinter3d,
+  scannerLabeler: illScannerLabeler,
   charger: illCharger,
+  powerbank: illPowerbank,
   webcam: illWebcam,
   psuCooling: illPsuCooling,
+  pcCase: illPcCase,
   accessories: illAccessories,
   speaker: illSpeaker,
+  hddExternal: illHddExternal,
+  pendriveSd: illPendriveSd,
+  monitorUltrawide: illMonitorUltrawide,
+  monitorPortable: illMonitorPortable,
+  routerWifi: illRouterWifi,
+  networkTools: illNetworkTools,
+  laptopStand: illLaptopStand,
+  laptopBag: illLaptopBag,
+  toolsElectronics: illToolsElectronics,
+  tabletEreader: illTabletEreader,
 };
 const images = {
   "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500&q=80": image0,
