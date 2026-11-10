@@ -41,11 +41,19 @@ export default function ProductDetail({ product: p, shop, onAdded }) {
         />
         <div>
           <div className="nt-detail-badges">
-            {p.category && <Badge variant="muted">{p.category}</Badge>}
+            {p.category && (
+              <Badge variant="muted">
+                {p.category}
+                {p.subcategory ? ` · ${p.subcategory}` : ""}
+              </Badge>
+            )}
             {p.condition && (
               <Badge variant={p.condition === "Nuevo" ? "success" : "cyan"}>
                 Estado: {p.condition}
               </Badge>
+            )}
+            {p.isIllustration && (
+              <Badge variant="muted">Ilustración representativa</Badge>
             )}
             {isDemo && (
               <span className="nt-demo-review-badge">
@@ -81,7 +89,7 @@ export default function ProductDetail({ product: p, shop, onAdded }) {
 
           {isDemo ? (
             <Alert title="Vista previa de catálogo">
-              Este ítem pertenece al catálogo de demostración de 48 productos.
+              Este ítem pertenece al catálogo de demostración de 240 productos.
               Para comprar o agregar al carrito real, publica o selecciona un
               producto guardado en PostgreSQL.
             </Alert>

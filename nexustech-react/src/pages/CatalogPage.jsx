@@ -9,7 +9,7 @@ import EmptyState from "../components/ui/EmptyState.jsx";
 import { useRemote } from "../hooks/useShop.js";
 import { DEMO_CATEGORIES, getDemoCatalog } from "../data/demoCatalog.js";
 
-const DEMO_PAGE_LIMIT = 12;
+const DEMO_PAGE_LIMIT = 24;
 
 export default function CatalogPage({
   shop,
@@ -23,8 +23,10 @@ export default function CatalogPage({
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [categoryId, setCategory] = useState("");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [conditionFilter, setConditionFilter] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState("default");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -62,25 +64,59 @@ export default function CatalogPage({
 
   const demoAll = useMemo(() => (demoMode ? getDemoCatalog() : []), [demoMode]);
 
+  const demoSubcategories = useMemo(() => {
+    if (!demoMode) return [];
+    const pool = categoryId
+      ? demoAll.filter((p) => p.category === categoryId)
+      : demoAll;
+    return [...new Set(pool.map((p) => p.subcategory).filter(Boolean))].sort();
+  }, [demoMode, demoAll, categoryId]);
+
   const demoFiltered = useMemo(() => {
     if (!demoMode) return [];
     const term = debounced.toLowerCase();
     const maxP = maxPrice !== "" ? Number(maxPrice) : null;
-    return demoAll.filter((p) => {
+    const filtered = demoAll.filter((p) => {
       if (categoryId && p.category !== categoryId) return false;
+      if (subcategoryFilter && p.subcategory !== subcategoryFilter) return false;
       if (conditionFilter && p.condition !== conditionFilter) return false;
       if (maxP !== null && p.price > maxP) return false;
       if (
         term &&
         !p.name.toLowerCase().includes(term) &&
         !p.description.toLowerCase().includes(term) &&
-        !p.category.toLowerCase().includes(term)
+        !p.category.toLowerCase().includes(term) &&
+        !(p.subcategory || "").toLowerCase().includes(term) &&
+        !(p.specs || []).some((s) => s.toLowerCase().includes(term))
       ) {
         return false;
       }
       return true;
     });
-  }, [demoMode, demoAll, debounced, categoryId, conditionFilter, maxPrice]);
+
+    if (sortBy === "price-asc") {
+      return [...filtered].sort((a, b) => a.price - b.price);
+    }
+    if (sortBy === "price-desc") {
+      return [...filtered].sort((a, b) => b.price - a.price);
+    }
+    if (sortBy === "name-asc") {
+      return [...filtered].sort((a, b) => a.name.localeCompare(b.name, "es"));
+    }
+    if (sortBy === "name-desc") {
+      return [...filtered].sort((a, b) => b.name.localeCompare(a.name, "es"));
+    }
+    return filtered;
+  }, [
+    demoMode,
+    demoAll,
+    debounced,
+    categoryId,
+    subcategoryFilter,
+    conditionFilter,
+    maxPrice,
+    sortBy,
+  ]);
 
   const categories = shop.categories.data || [];
   const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
@@ -98,17 +134,32 @@ export default function CatalogPage({
       }
     : result.data;
 
-  const products = favoriteOnly
+  const rawProducts = favoriteOnly
     ? data?.items.map((f) => f.product) || []
     : data?.items || [];
+
+  const products = useMemo(() => {
+    if (isDemoActive || sortBy === "default") return rawProducts;
+    if (sortBy === "price-asc")
+      return [...rawProducts].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-desc")
+      return [...rawProducts].sort((a, b) => b.price - a.price);
+    if (sortBy === "name-asc")
+      return [...rawProducts].sort((a, b) => a.name.localeCompare(b.name, "es"));
+    if (sortBy === "name-desc")
+      return [...rawProducts].sort((a, b) => b.name.localeCompare(a.name, "es"));
+    return rawProducts;
+  }, [isDemoActive, rawProducts, sortBy]);
 
   function switchMode(enableDemo) {
     setDemoMode(enableDemo);
     setCategory("");
+    setSubcategoryFilter("");
     setConditionFilter("");
     setSearch("");
     setDebounced("");
     setMaxPrice("");
+    setSortBy("default");
     setPage(1);
   }
 
@@ -158,13 +209,10 @@ export default function CatalogPage({
       )}
 
       {isDemoActive && (
-        <Alert title="Modo catálogo de demostración (48 ítems curados)">
-          Estás explorando la presentación visual de demostración para Sede Viña
-          del Mar (sin persistencia SQL ni compras reales).{" "}
-          <Button
-            variant="secondary"
-            onClick={() => switchMode(false)}
-          >
+        <Alert title="Modo catálogo de demostración (240 productos en 12 categorías)">
+          Estás explorando la presentación visual de demostración para UNAB Sede
+          Viña del Mar (sin persistencia SQL ni compras reales).{" "}
+          <Button variant="secondary" onClick={() => switchMode(false)}>
             Volver al catálogo en vivo (NestJS)
           </Button>
         </Alert>
@@ -182,6 +230,7 @@ export default function CatalogPage({
                 value={categoryId}
                 onChange={(e) => {
                   setCategory(e.target.value);
+                  setSubcategoryFilter("");
                   setPage(1);
                 }}
               >
@@ -199,6 +248,25 @@ export default function CatalogPage({
                     ))}
               </Field>
 
+              {isDemoActive && demoSubcategories.length > 0 && (
+                <Field
+                  label="Subcategoría"
+                  as="select"
+                  value={subcategoryFilter}
+                  onChange={(e) => {
+                    setSubcategoryFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">Todas las subcategorías</option>
+                  {demoSubcategories.map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+                </Field>
+              )}
+
               {isDemoActive && (
                 <Field
                   label="Estado del equipo"
@@ -214,6 +282,22 @@ export default function CatalogPage({
                   <option value="Usado">Usado</option>
                 </Field>
               )}
+
+              <Field
+                label="Ordenar por"
+                as="select"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="default">Novedades / Destacados</option>
+                <option value="price-asc">Precio: menor a mayor</option>
+                <option value="price-desc">Precio: mayor a menor</option>
+                <option value="name-asc">Nombre: A - Z</option>
+                <option value="name-desc">Nombre: Z - A</option>
+              </Field>
 
               <Field
                 label="Precio máximo en CLP"
@@ -240,8 +324,10 @@ export default function CatalogPage({
                 onClick={() => {
                   setSearch("");
                   setCategory("");
+                  setSubcategoryFilter("");
                   setConditionFilter("");
                   setMaxPrice("");
+                  setSortBy("default");
                   setPage(1);
                 }}
               >
@@ -276,7 +362,7 @@ export default function CatalogPage({
               </h2>
               <p>
                 {data
-                  ? `${data.total} resultados · página ${data.page}`
+                  ? `${data.total} resultados · página ${data.page} (${data.limit} por página)`
                   : "Consulta al servidor"}
               </p>
             </div>
@@ -288,7 +374,7 @@ export default function CatalogPage({
                 >
                   {isDemoActive
                     ? "Ver catálogo API real"
-                    : "Ver catálogo demo (48)"}
+                    : "Ver catálogo demo (240)"}
                 </Button>
               )}
               {!isDemoActive && (
@@ -303,7 +389,7 @@ export default function CatalogPage({
             <Field
               label="Buscar productos"
               type="search"
-              placeholder="Nombre, categoría o descripción"
+              placeholder="Nombre, categoría, subcategoría o especificación"
               value={search}
               maxLength={160}
               onChange={(e) => setSearch(e.target.value)}
@@ -324,11 +410,8 @@ export default function CatalogPage({
                   Reintentar
                 </Button>
                 {!favoriteOnly && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => switchMode(true)}
-                  >
-                    Explorar catálogo de demostración (48 ítems)
+                  <Button variant="ghost" onClick={() => switchMode(true)}>
+                    Explorar catálogo de demostración (240 ítems)
                   </Button>
                 )}
               </div>
@@ -344,7 +427,7 @@ export default function CatalogPage({
               action={
                 !favoriteOnly && !isDemoActive ? (
                   <Button variant="secondary" onClick={() => switchMode(true)}>
-                    Explorar catálogo demo (48 ítems)
+                    Explorar catálogo demo (240 ítems)
                   </Button>
                 ) : null
               }

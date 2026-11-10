@@ -164,3 +164,29 @@ test("Reviews endpoint validates product UUID, Bearer header and schema", async 
   assert.equal(created.rating, 5);
   assert.equal(lastRequest.headers.Authorization, "Bearer signed.jwt.token");
 });
+
+import { part1Products } from "../src/data/catalogPart1.js";
+import { part2Products } from "../src/data/catalogPart2.js";
+import { part3Products } from "../src/data/catalogPart3.js";
+
+test("Curated demo catalog contains exactly 240 distinct, valid products across 12 categories", () => {
+  const all = [...part1Products, ...part2Products, ...part3Products];
+  assert.equal(all.length, 240);
+  const ids = new Set(all.map((p) => p.id));
+  assert.equal(ids.size, 240);
+  const categories = new Set(all.map((p) => p.category));
+  assert.equal(categories.size, 12);
+  for (const item of all) {
+    assert.ok(typeof item.name === "string" && item.name.length >= 5);
+    assert.ok(typeof item.subcategory === "string" && item.subcategory.length > 0);
+    assert.ok(["Nuevo", "Usado"].includes(item.condition));
+    assert.ok(Number.isSafeInteger(item.price) && item.price > 0);
+    assert.ok(Number.isSafeInteger(item.stock) && item.stock >= 0);
+    assert.ok(Array.isArray(item.specs) && item.specs.length >= 3);
+    assert.ok(typeof item.imgKey === "string" && item.imgKey.length > 0);
+    for (const rev of item.reviews || []) {
+      assert.equal(rev.isDemo, true);
+      assert.ok(rev.rating >= 1 && rev.rating <= 5);
+    }
+  }
+});
