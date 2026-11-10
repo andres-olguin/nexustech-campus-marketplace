@@ -35,3 +35,5 @@ Este directorio es un conjunto de **archivos Markdown**. Sirve en GitHub y puede
 **No almacenar:** datos de compañeros no públicos, secretos, chats privados, calificaciones no autorizadas o credenciales.
 
 9. [Entorno de laptop Windows y tres agentes](09-ENTORNO-LAPTOP-WINDOWS.md): Codex CLI, Antigravity izquierda, Claude Code central, ubicación Git, permisos y worktrees.
+
+10. [Autonomía de agentes en VS Code](10-AUTONOMIA-AGENTES-VSCODE.md): menos autorizaciones con sandbox, protección de cambios locales y posible agente Copilot.
