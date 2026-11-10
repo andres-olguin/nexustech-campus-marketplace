@@ -135,11 +135,11 @@ docker compose up --build
 ### Servicios y Puertos Disponibles:
 | Servicio | Contenedor | Puerto Local | Descripción |
 |---|---|---|---|
-| **Frontend** | `nexustech-frontend` | `http://localhost:5173` | Aplicación React servida por Nginx. |
-| **Backend** | `nexustech-backend` | `http://localhost:3000` | API REST NestJS y Swagger. |
-| **Swagger** | `nexustech-backend` | `http://localhost:3000/api/docs` | Explorador interactivo OpenAPI. |
-| **PostgreSQL** | `nexustech-postgres` | `localhost:5432` | Base de datos relacional. |
-| **MongoDB** | `nexustech-mongodb` | `localhost:27017` | Base de datos documental NoSQL. |
+| **Frontend** | `web` | `http://localhost:5173` | React + Vite. |
+| **Backend** | `api` | `http://localhost:3001` | API REST NestJS. |
+| **Swagger** | `api` | `http://localhost:3001/docs` | OpenAPI. |
+| **PostgreSQL** | `postgres` | `localhost:5433` | PostgreSQL persistente. |
+| **MongoDB** | `mongo` | Red interna, 27017 | MongoDB autenticado. |
 
 ---
 ## Pruebas y Limitaciones Conocidas
@@ -149,7 +149,7 @@ docker compose up --build
   - Frontend: Pruebas de integración E2E con Playwright (`nexustech-react/test/browser/marketplace.spec.js`).
 - **Limitaciones Conocidas:**
   - Los pagos son simulados (`provider: simulation`); no se integran pasarelas bancarias reales ni cobros comerciales.
-  - La auditoría en MongoDB opera bajo semántica *best-effort* tras el commit de SQL (no bloquea compras en caso de falla de red en Mongo).
+  - Los eventos se guardan en una outbox SQL dentro de la transaccion y se entregan a MongoDB con reintentos e identificador unico. No hay transaccion distribuida.
 
 ---
 

@@ -58,7 +58,7 @@ MongoDB utiliza el volumen mongo_data.
 Los datos persisten al reiniciar los contenedores.
 No ejecutar docker compose down -v si se desea conservarlos.
 
-## Prueba realizada
+## Prueba reportada antes de esta auditoria
 
 - Inicio de los cuatro servicios.
 - Migraciones PostgreSQL ejecutadas.
@@ -73,3 +73,9 @@ No ejecutar docker compose down -v si se desea conservarlos.
 
 - Verificar la funcionalidad real de MongoDB.
 - Completar las pruebas integrales del Hito 3.
+
+## Auditoria del 10 de noviembre
+
+Compose unico: compose.yaml. Configuracion validada con --env-file .env.example config --quiet. El intento up -d --build no pudo conectar al motor Docker Desktop Linux; esta sesion no certifica el inicio de los cuatro contenedores. Ver docs/hito3/MONGO_QA_2026-11-10.md y su informe de validacion.
+
+Mongo requiere MONGO_PASSWORD; usa autenticacion y red interna. Los volumenes existentes necesitan provisionar el usuario si fueron creados sin autenticacion. API readiness: /api/v1/health/ready. No eliminar volumenes para resolver incompatibilidades sin respaldar los datos.
