@@ -45,3 +45,6 @@ Riesgos o conflictos:
 PR / próxima integración:
 Explicación didáctica (qué, cómo, por qué, alternativa, prueba):
 \`\`\`
+
+## Entorno confirmado: laptop de casa
+Consultar [Entorno Windows y uso de los tres agentes](09-ENTORNO-LAPTOP-WINDOWS.md). En esta laptop: Codex por CLI de terminal; Antigravity en panel izquierdo VS Code; Claude Code oficial en pestaña central. El panel derecho de Claude/ChatGPT Codex no funciona según el estudiante. `claude` no estaba en PATH en PowerShell, pero la extensión central sí emitió una ejecución de `pwd`. El error `not a git repository` ocurrió en `C:\Users\andre`, no dentro de la carpeta del proyecto. Cada agente debe verificar directorio y rama antes de ejecutar.
