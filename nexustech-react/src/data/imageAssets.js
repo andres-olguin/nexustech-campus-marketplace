@@ -20,6 +20,23 @@ import image18 from '../assets/images/producto-18.jpg';
 import image19 from '../assets/images/producto-19.jpg';
 import image20 from '../assets/images/producto-20.jpg';
 import placeholder from '../assets/images/product-placeholder.svg';
+import illSmartphone from '../assets/images/illustrations/smartphone.svg';
+import illPrinter from '../assets/images/illustrations/printer.svg';
+import illCharger from '../assets/images/illustrations/charger.svg';
+import illWebcam from '../assets/images/illustrations/webcam.svg';
+import illPsuCooling from '../assets/images/illustrations/psu-cooling.svg';
+import illAccessories from '../assets/images/illustrations/accessories.svg';
+import illSpeaker from '../assets/images/illustrations/speaker.svg';
+
+export const illustrations = {
+  smartphone: illSmartphone,
+  printer: illPrinter,
+  charger: illCharger,
+  webcam: illWebcam,
+  psuCooling: illPsuCooling,
+  accessories: illAccessories,
+  speaker: illSpeaker,
+};
 const images = {
   "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500&q=80": image0,
   "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=500&q=80": image1,

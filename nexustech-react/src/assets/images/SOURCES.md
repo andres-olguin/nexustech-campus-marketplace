@@ -32,3 +32,13 @@ Listado de archivos locales (`producto-00.jpg` a `producto-20.jpg` y `laptop.jpg
 ## Logos Institucionales (`src/assets/images/logos/`)
 - `isotipo-unab.png`: Isotipo Universidad Andrés Bello — uso estrictamente académico contextual para el proyecto de la asignatura Desarrollo Web y Móvil · Sede Viña del Mar.
 - `logo-mastertech.png`: Emblema MasterTech SpA — referencia de apoyo metodológico/técnico secundario.
+
+## Ilustraciones Vectoriales Representativas (`src/assets/images/illustrations/`)
+Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, licencia propia del proyecto) para categorías sin fotografía específica verificable, evitando asignar fotos erróneas de otros componentes:
+- `smartphone.svg`: Ilustración representativa de smartphone.
+- `printer.svg`: Ilustración representativa de impresora y multifuncional.
+- `charger.svg`: Ilustración representativa de cargadores GaN y fuentes de energía.
+- `webcam.svg`: Ilustración representativa de cámaras web y streaming.
+- `psu-cooling.svg`: Ilustración representativa de fuentes de poder y sistemas de refrigeración.
+- `accessories.svg`: Ilustración representativa de hubs USB-C y adaptadores.
+- `speaker.svg`: Ilustración representativa de monitores de estudio y parlantes.
