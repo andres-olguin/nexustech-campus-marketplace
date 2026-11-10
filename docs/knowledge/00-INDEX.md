@@ -33,3 +33,5 @@ Este directorio es un conjunto de **archivos Markdown**. Sirve en GitHub y puede
 4. Obsidian no convierte estos apuntes en memoria permanente de ChatGPT, Claude ni Codex. Estos agentes deben leerlos al comenzar.
 
 **No almacenar:** datos de compañeros no públicos, secretos, chats privados, calificaciones no autorizadas o credenciales.
+
+9. [Entorno de laptop Windows y tres agentes](09-ENTORNO-LAPTOP-WINDOWS.md): Codex CLI, Antigravity izquierda, Claude Code central, ubicación Git, permisos y worktrees.
