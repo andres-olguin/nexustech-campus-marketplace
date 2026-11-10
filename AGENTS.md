@@ -18,3 +18,6 @@ Lee antes de trabajar: [índice](docs/knowledge/00-INDEX.md), [contrato pedagóg
 
 ## Regla de tutoría
 Usa [contrato maestro](docs/knowledge/01-CONTRATO-MAESTRO.md). Enseña desde cero y hasta el nivel donde el estudiante encuentre y explique cada archivo, método, línea, configuración, decisión y fallo. Una pregunta/ejercicio a la vez, sin adelantar respuesta. Evalúa también defensa no técnica y aportes del equipo con evidencia.
+
+## Entorno local del expositor
+En laptop Windows del estudiante: **Codex CLI en terminal, Antigravity a la izquierda y Claude Code oficial en pestaña central de VS Code**. Panel derecho de ChatGPT Codex/Claude no operativo según estudiante; `claude --version` no estaba instalado en PATH, sin invalidar extensión. Antes de ejecutar, verificar que el directorio sea el worktree NexusTech correcto: `git status` falló en `C:\Users\andre` por estar fuera del repositorio. Consultar [guía del entorno](docs/knowledge/09-ENTORNO-LAPTOP-WINDOWS.md). No habilitar permisos irrestrictos por defecto.
