@@ -190,3 +190,20 @@ test("Curated demo catalog contains exactly 240 distinct, valid products across 
     }
   }
 });
+
+test("Demo product IDs can never be added to real cart or favorites", () => {
+  const api = createApiClient({
+    fetchImpl: async () => {
+      throw new Error("Should never reach fetch for demo ID");
+    },
+  });
+  api.setToken("signed.jwt.token");
+  assert.throws(
+    () => api.setQuantity("demo-001", 1),
+    (e) => e.status === 400,
+  );
+  assert.throws(
+    () => api.favorite("demo-001", false),
+    (e) => e.status === 400,
+  );
+});
