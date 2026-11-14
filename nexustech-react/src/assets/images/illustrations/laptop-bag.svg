@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 320" width="500" height="320">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#04132e"/><stop offset="100%" stop-color="#0c2452"/></linearGradient></defs>
+  <rect width="500" height="320" fill="url(#bg)"/>
+  
+    <rect x="175" y="85" width="150" height="165" rx="22" fill="#0f2b5c" stroke="#00d2ff" stroke-width="3"/>
+    <path d="M220 85 C220 62, 280 62, 280 85" fill="none" stroke="#38bdf8" stroke-width="4"/>
+    <rect x="198" y="145" width="104" height="75" rx="10" fill="#091e45" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="210" y1="168" x2="290" y2="168" stroke="#00d2ff" stroke-width="2"/>
+  
+  <text x="250" y="290" text-anchor="middle" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="12" font-weight="600">ILUSTRACIÓN REPRESENTATIVA · MOCHILA / FUNDA PORTÁTIL</text>
+</svg>

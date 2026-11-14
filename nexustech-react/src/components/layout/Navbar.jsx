@@ -94,6 +94,17 @@ export default function Navbar({
           >
             {user ? "Mi cuenta (" + user.name + ")" : "Ingresar / Registro"}
           </a>
+          <button
+            type="button"
+            className="nt-mobile-publish nt-button nt-button--secondary"
+            onClick={() => {
+              setOpen(false);
+              onPublish();
+            }}
+          >
+            <Icon name="plus" size={16} />
+            Publicar equipo
+          </button>
         </nav>
 
         <div className="nt-nav-actions">

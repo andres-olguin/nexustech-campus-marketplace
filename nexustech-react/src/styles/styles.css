@@ -799,8 +799,8 @@ select.nt-input {
   left: 0;
   bottom: 0;
   right: 0;
-  padding: 30px 20px 18px;
-  background: linear-gradient(transparent, rgba(3, 16, 44, 0.95));
+  padding: 36px 20px 24px;
+  background: linear-gradient(transparent, rgba(3, 16, 44, 0.96));
 }
 
 .nt-hero-photo-note span {
@@ -820,7 +820,7 @@ select.nt-input {
 .nt-hero-chip {
   position: absolute;
   padding: 10px 14px;
-  background: rgba(7, 25, 59, 0.92);
+  background: rgba(7, 25, 59, 0.95);
   border: 1px solid rgba(0, 210, 255, 0.35);
   border-radius: 10px;
   display: flex;
@@ -828,8 +828,9 @@ select.nt-input {
   gap: 10px;
   font-size: 11px;
   color: var(--nt-cyan);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
+  z-index: 2;
 }
 
 .nt-hero-chip small {
@@ -840,13 +841,13 @@ select.nt-input {
 }
 
 .nt-hero-chip-top {
-  top: -14px;
+  top: -16px;
   right: 14px;
 }
 
 .nt-hero-chip-bottom {
-  bottom: -14px;
-  left: 14px;
+  bottom: -24px;
+  right: 14px;
   border-color: rgba(14, 154, 167, 0.45);
   color: #38bdf8;
 }
@@ -877,6 +878,24 @@ select.nt-input {
   top: 115px;
   min-width: 0;
   box-shadow: var(--nt-shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.nt-filter-panel .nt-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--nt-cyan);
+  font-size: 12px;
+  font-weight: 550;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--nt-line);
+}
+
+.nt-filter-panel .nt-text-link:hover {
+  text-decoration: underline;
 }
 
 .nt-filter-panel h2 {
@@ -1975,6 +1994,12 @@ html:has(dialog.nt-dialog[open]) {
   .nt-navigation .nt-mobile-auth {
     display: flex !important;
   }
+  .nt-navigation .nt-mobile-publish {
+    display: inline-flex !important;
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 4px;
+  }
   .nt-menu-toggle {
     display: inline-flex !important;
   }
@@ -2009,20 +2034,56 @@ html:has(dialog.nt-dialog[open]) {
     font-size: 10px;
   }
   .nt-ribbon-shell {
-    padding: 0 16px;
+    padding: 0 14px;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+  .nt-ribbon-text {
+    white-space: normal;
+    flex-wrap: wrap;
+    gap: 4px 6px;
   }
   .nt-ribbon-right {
     display: none;
   }
   .nt-nav-shell {
-    padding: 12px 16px;
-    gap: 10px;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .nt-brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .nt-brand-text strong {
+    font-size: 17px;
   }
   .nt-brand-text small {
     display: none;
+  }
+  .nt-btn-publish,
+  .nt-auth-link {
+    display: none !important;
+  }
+  .nt-btn-cart {
+    padding: 8px 10px;
+    min-height: 40px;
+  }
+  .nt-hero {
+    padding: 20px;
+    gap: 24px;
+  }
+  .nt-hero-chip {
+    padding: 7px 10px;
+    font-size: 10px;
+  }
+  .nt-hero-chip-top {
+    top: -10px;
+    right: 8px;
+  }
+  .nt-hero-chip-bottom {
+    bottom: -14px;
+    right: 8px;
   }
   .nt-product-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2065,25 +2126,24 @@ html:has(dialog.nt-dialog[open]) {
   position: absolute;
   left: 12px;
   top: 12px;
-  padding: 3px 8px;
+  padding: 4px 8px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.4px;
   border-radius: 5px;
+  background: rgba(3, 16, 44, 0.88);
   backdrop-filter: blur(4px);
   pointer-events: none;
 }
 
 .nt-condition-pill.is-new {
-  background: rgba(16, 185, 129, 0.22);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.55);
 }
 
 .nt-condition-pill.is-used {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.55);
 }
 
 .nt-product-detail-wrap {

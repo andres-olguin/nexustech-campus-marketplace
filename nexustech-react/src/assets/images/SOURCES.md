@@ -32,3 +32,19 @@ Listado de archivos locales (`producto-00.jpg` a `producto-20.jpg` y `laptop.jpg
 ## Logos Institucionales (`src/assets/images/logos/`)
 - `isotipo-unab.png`: Isotipo Universidad Andrés Bello — uso estrictamente académico contextual para el proyecto de la asignatura Desarrollo Web y Móvil · Sede Viña del Mar.
 - `logo-mastertech.png`: Emblema MasterTech SpA — referencia de apoyo metodológico/técnico secundario.
+
+## Ilustraciones Vectoriales Representativas (`src/assets/images/illustrations/`)
+Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, licencia propia del proyecto) para categorías y subcategorías sin fotografía específica verificable, evitando asignar fotos erróneas de otros componentes:
+- `smartphone.svg` / `smartphone-pro.svg`: Ilustraciones representativas de smartphones estándar y gama alta/dev.
+- `printer.svg` / `printer-3d.svg` / `scanner-labeler.svg`: Impresoras tradicionales, impresoras 3D/filamentos y escáneres/etiquetadoras.
+- `charger.svg` / `powerbank.svg`: Cargadores GaN, regletas y power banks / UPS.
+- `webcam.svg`: Cámaras web, proyectores y kits de iluminación streaming.
+- `psu-cooling.svg` / `pc-case.svg`: Fuentes de poder, refrigeración líquida/aire y gabinetes PC.
+- `accessories.svg`: Hubs USB-C, docking stations, cables y adaptadores.
+- `speaker.svg`: Monitores de audio activos, parlantes e interfaces.
+- `hdd-external.svg` / `pendrive-sd.svg`: Discos duros externos/internos, pendrives y tarjetas SD/microSD.
+- `monitor-ultrawide.svg` / `monitor-portable.svg`: Monitores ultrawide curvos, pantallas portátiles y brazos articulados.
+- `router-wifi.svg` / `network-tools.svg`: Routers Wi-Fi 6/7, Mesh, cables consola y herramientas de red.
+- `laptop-stand.svg` / `laptop-bag.svg`: Soportes ergonómicos, bases refrigerantes, fundas y mochilas.
+- `tools-electronics.svg`: Multímetros, kits de precisión, calculadoras y pasta térmica.
+- `tablet-ereader.svg`: E-readers de tinta electrónica y tabletas digitalizadoras.

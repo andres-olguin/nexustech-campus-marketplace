@@ -45,7 +45,9 @@ export default function ProductCard({
         </button>
         <span className={"nt-photo-label" + (!p.isActive ? " is-archived" : "")}>
           {isDemo
-            ? "DEMO · VIÑA DEL MAR"
+            ? p.isIllustration
+              ? "ILUSTRACIÓN · DEMO"
+              : "DEMO · VIÑA DEL MAR"
             : p.isActive
               ? "VIÑA DEL MAR"
               : "ARCHIVADO"}
@@ -103,7 +105,10 @@ export default function ProductCard({
 
       <div className="nt-product-body">
         <div className="nt-card-meta">
-          <Badge variant="muted">{category || p.category || "General"}</Badge>
+          <Badge variant="muted">
+            {category || p.category || "General"}
+            {p.subcategory ? ` · ${p.subcategory}` : ""}
+          </Badge>
           <span className={"nt-stock-tag " + stockClass}>{stockLabel}</span>
         </div>
 
