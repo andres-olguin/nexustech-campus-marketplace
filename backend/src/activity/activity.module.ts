@@ -6,4 +6,3 @@ import { ActivityService } from './activity.service';
   exports: [ActivityService],
 })
 export class ActivityModule {}
-
