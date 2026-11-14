@@ -1,19 +1,19 @@
 # NexusTech — Backend Hito 3
 
-API NestJS 11, TypeScript, TypeORM y PostgreSQL. Mantiene el marketplace de tecnología para la comunidad estudiantil: catálogo, publicaciones, comprador/vendedor, favoritos, carrito y pedidos con transacciones **simuladas**.
+API NestJS 11, TypeScript, TypeORM, PostgreSQL y MongoDB. Mantiene el marketplace de tecnología para la comunidad estudiantil: catálogo, publicaciones, comprador/vendedor, favoritos, carrito y pedidos con transacciones **simuladas**.
 
-Backend canónico para el Hito 3: PR #4. La variante Express de `2a9a76d` no se integra en este directorio. Ver [revisión del conflicto](../docs/hito3/BACKEND_CONFLICT_REVIEW.md), [guía React](../docs/hito3/FRONTEND_INTEGRATION_GUIDE.md), [contrato Mongo](../docs/hito3/ACTIVITY_INTEGRATION.md) y [demostración aislada](DEMO_PROCEDURE.md).
+La API canónica usa NestJS (base del PR #4). La variante Express de `2a9a76d` no se integra en este directorio. Ver [revisión del conflicto](../docs/hito3/BACKEND_CONFLICT_REVIEW.md), [guía React](../docs/hito3/FRONTEND_INTEGRATION_GUIDE.md), [contrato Mongo](../docs/hito3/ACTIVITY_INTEGRATION.md) y [demostración aislada](DEMO_PROCEDURE.md).
 
 ## Arranque
 
-Requisitos: Node.js >=22.12, npm y PostgreSQL 16 o superior. Verificado en Windows con Node 26.13 y PostgreSQL 18.6. No se requiere MongoDB para ejecutar este backend. No se modificó Docker Compose.
+Requisitos: Node.js >=22.12, npm y PostgreSQL 16 o superior. Verificado en Windows con Node 26.13 y PostgreSQL 18.6. Para el flujo completo se requieren ambas bases; el camino recomendado es [Docker Compose](../DOCKER.md). Sin MongoDB, actividad devuelve 503 y la cola SQL conserva pendientes.
 
 Desde `backend/`, en PowerShell:
 
 ```powershell
 npm ci
 Copy-Item .env.example .env
-# Editar .env con la conexión real de PostgreSQL y un JWT_SECRET aleatorio.
+# Editar .env con DATABASE_URL (o sus campos), MONGODB_URI y un JWT_SECRET aleatorio.
 # Generar un secreto: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 npm run migration:run
 npm run build
@@ -21,6 +21,8 @@ npm start
 ```
 
 Crear previamente la base y un usuario con permisos de conexión y creación de tablas. La migración usa `pgcrypto` y `gen_random_uuid()`; el usuario de migraciones debe tener los permisos necesarios para instalar la extensión si no existe. No usar el superusuario de las pruebas para producción.
+
+Definí MONGODB_URI para una instancia MongoDB que uses en el entorno de desarrollo. Por defecto la base de documentos se llama nexustech (configurable con MONGODB_DB_NAME).
 
 Conexión: definir `DATABASE_URL` o las variables `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`. `DATABASE_URL` tiene precedencia; evitar mezclar ambas modalidades. `JWT_SECRET` es obligatorio, mínimo 32 bytes, sin valor de respaldo. `.env` está ignorado por Git; `.env.example` no contiene credenciales.
 
@@ -42,6 +44,8 @@ Los tokens deben enviarse en `Authorization: Bearer TOKEN`. El ID del usuario se
 ## Arquitectura y modelo
 
 `src/main.ts` inicia la aplicación; `bootstrap.ts` configura validación estricta, errores, CORS, Helmet y Swagger. `app.module.ts` registra controladores, servicios y dependencias. Cada dominio separa controladores HTTP y servicios de negocio en `auth/`, `catalog/`, `users/`, `cart/` y `orders/`. `common/dto.ts` contiene entradas validadas; `common/openapi.ts` describe respuestas, sin exponer entidades sensibles. `database/` contiene entidades TypeORM, configuración y migraciones SQL.
+
+### Modelo relacional
 
 ```mermaid
 erDiagram
@@ -80,18 +84,18 @@ npm run build
 npm run migration:run:prod
 ```
 
-La reversión inicial elimina tablas y datos del backend; usarla solo en una base de prueba o con respaldo y autorización operativa. La primera migración crea diez tablas y sus restricciones/índices. La segunda agrega seguimiento por vendedor y completa datos históricos desde los productos referenciados: once tablas en total. Su reversión se rechaza si ya existe seguimiento avanzado para no borrarlo silenciosamente. Añadir migraciones nuevas para cambios posteriores: no editar las aplicadas en una base compartida. La extensión pgcrypto no se elimina al revertir para no afectar consumidores externos.
+La reversión inicial elimina tablas y datos del backend; usarla solo en una base de prueba o con respaldo y autorización operativa. La primera migración crea diez tablas y sus restricciones/índices. La segunda agrega seguimiento por vendedor. Las dos siguientes crean la cola de salida y la columna de ficha técnica de productos. No uses migraciones de reversión para un ensayo sobre datos reales. Añadir migraciones nuevas para cambios posteriores: no editar las aplicadas en una base compartida. La extensión pgcrypto no se elimina al revertir para no afectar consumidores externos.
 
 ## Pruebas reproducibles
 
 ```powershell
 npm test
-npm audit
+npm run test:real-mongo
 ```
 
-`npm test` compila y ejecuta pruebas HTTP con Supertest contra un proceso **real** PostgreSQL aislado mediante `embedded-postgres` (dependencia de desarrollo). Usa el puerto 55439, directorio temporal, credenciales aleatorias y base `nexustech_test`; no utiliza ni borra la base de `.env`. Detiene el proceso y elimina su cluster al terminar. Requiere que el puerto esté libre, binarios compatibles con el sistema y permiso para ejecutar procesos locales. No crear usuarios del sistema ni ejecutar como root en Linux; usar un usuario normal. No es un simulador SQL ni una prueba de conexión al entorno de despliegue.
+`npm test` compila y ejecuta pruebas HTTP con Supertest contra un proceso **real** PostgreSQL aislado mediante `embedded-postgres` (dependencia de desarrollo). Usa puertos dinámicos, un directorio temporal, credenciales aleatorias y base `nexustech_test`; no utiliza ni borra la base de `.env`. Detiene el proceso y elimina su cluster al terminar. Requiere que el puerto esté libre, binarios compatibles con el sistema y permiso para ejecutar procesos locales. No crear usuarios del sistema ni ejecutar como root en Linux; usar un usuario normal. No es un simulador SQL ni una prueba de conexión al entorno de despliegue.
 
-Se verifican CLIs de migración TypeScript/producción, salud SQL, esquemas Swagger, validaciones, JWT, perfiles, propiedad, claves foráneas, filtros combinados, favoritos, carrito, checkout concurrente/idempotente, competencia por última unidad, rollback de una compra fallida y cancelación concurrente. También seguimiento multivendedor, permisos y aislamiento de eventos fallidos, carrera cancelación/preparación y persistencia tras reiniciar PostgreSQL y dos procesos API. Requiere puertos 55439 y 55440 disponibles. La suite no prueba React, Docker Compose ni MongoDB.
+Se verifican CLIs de migración TypeScript/producción, salud SQL, esquemas Swagger, validaciones, JWT, perfiles, propiedad, claves foráneas, filtros combinados, favoritos, carrito, checkout concurrente/idempotente, competencia por última unidad, rollback de una compra fallida y cancelación concurrente. También seguimiento multivendedor, permisos y aislamiento de eventos fallidos, carrera cancelación/preparación y persistencia tras reiniciar PostgreSQL y dos procesos API. Con `npm run test:real-mongo`, se suma un proceso aislado de MongoDB con WiredTiger y se verifican mensajes, permisos y reintentos. El [flujo de CI](../.github/workflows/hito3-compose.yml) agrega una ejecución con Docker Compose.
 
 El lockfile fija las versiones. Overrides de `glob` y `minimatch` corrigen avisos transitivos de la línea TypeORM 0.3. Las migraciones se registran explícitamente, sin patrones glob. Ver [VALIDATION.md](VALIDATION.md) para la fase inicial y [PHASE2_REPORT.md](PHASE2_REPORT.md) para esta fase de integración y cierre.
 
@@ -103,12 +107,14 @@ Formato de error: `{statusCode,message,error}`. Validación 400; credenciales 40
 
 Alcance académico: sin recuperación de contraseña, verificación de correo, MFA, refresh tokens ni revocación inmediata. No hay pagos reales, envíos reales ni validación de pertenencia institucional. No se afirma que esta implementación sea una plataforma comercial lista para producción.
 
-## Integración reservada de actividad
+## Actividad y catálogo técnico
 
-No se crea ni modifica `src/activity/`. El otro agente debe exportar `ActivityModule` y agregarlo a `imports` de `AppModule`, con sus propias dependencias y `MONGODB_URI`. `EventEmitterModule` ya está registrado. Suscribirse mediante `@OnEvent('order.created')` (o los otros eventos del contrato) y usar exclusivamente `{userId,resourceId,occurredAt}`. `ActivityEvents` publica después del commit y aísla excepciones/rechazos de listeners; una falla Mongo no cambia el resultado SQL. Entrega best effort: no hay cola persistente, outbox ni reintentos garantizados.
+`ActivityModule` escribe conversaciones y eventos en MongoDB. El backend verifica qué cuentas participan antes de aceptar un mensaje o mostrarlo. Una transacción SQL conserva el evento en `activity_outbox` hasta entregarlo a MongoDB; los reintentos usan un ID de evento único. La ficha técnica de una publicación vive junto a su producto en PostgreSQL.
+
+`GET /api/v1/products` combina filtros de categoría, búsqueda, precio y características. Se aplican antes de obtener la página. `GET /api/v1/products/facets` permite consultar los valores disponibles de cada característica. Las rutas y esquemas vigentes están en Swagger.
 
 ## Fuentes y uso de IA
 
-Implementación asistida por Codex a partir de los requisitos del Hito 3 y el catálogo existente. La IA propuso contrato, esquema, controladores, servicios, documentación y pruebas; las afirmaciones de funcionamiento se limitan a comandos ejecutados y resultados registrados. No se modificaron frontend ni archivos de infraestructura ni el módulo reservado.
+Implementación asistida por Codex a partir de los requisitos del Hito 3 y el catálogo existente. La IA propuso contrato, esquema, controladores, servicios, documentación y pruebas; las afirmaciones de funcionamiento se limitan a comandos ejecutados y resultados registrados. La integración posterior se documenta en el README principal y en las pruebas acompañantes.
 
 Referencias primarias: [validación NestJS](https://docs.nestjs.com/techniques/validation), [OpenAPI NestJS](https://docs.nestjs.com/openapi/introduction), [JWT NestJS](https://github.com/nestjs/jwt), [transacciones TypeORM](https://typeorm.io/docs/advanced-topics/transactions/), [bloqueos PostgreSQL](https://www.postgresql.org/docs/current/explicit-locking.html), [scrypt Node.js](https://nodejs.org/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback), [embedded-postgres](https://github.com/leinelissen/embedded-postgres).

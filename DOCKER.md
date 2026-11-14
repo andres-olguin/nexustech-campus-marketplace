@@ -1,81 +1,59 @@
-﻿# NexusTech Campus Marketplace - Docker
+# NexusTech Hito 3 · Paso a paso en Windows
 
-## Servicios
+Usá **PowerShell**, Node.js 22.12 o posterior y **Docker Desktop en modo Linux**. Abrí Docker Desktop y esperá a que aparezca el motor en ejecución. Si venís del ZIP anterior, descomprimí esta entrega en una carpeta nueva.
 
-- Frontend: React + Vite
-- Backend: NestJS
-- Base SQL: PostgreSQL 16
-- Base NoSQL: MongoDB 7
+1. Entrá a la carpeta que tiene `compose.yaml`. Comprobá el entorno:
 
-## Requisitos
+   ```powershell
+   Get-Item compose.yaml
+   node --version
+   docker info
+   docker compose version
+   ```
 
-- Docker Desktop funcionando
-- Docker Compose
+2. Generá los valores locales e iniciá los cuatro servicios:
 
-## Configuracion inicial
+   ```powershell
+   node scripts/hito3-env.cjs
+   docker compose -p nexustech-hito3-final config --quiet
+   docker compose -p nexustech-hito3-final up -d --build --wait --wait-timeout 240
+   docker compose -p nexustech-hito3-final ps
+   ```
 
-1. Clonar el repositorio.
-2. Copiar .env.example como .env.
-3. Reemplazar los valores de ejemplo por credenciales locales seguras.
-4. Ejecutar:
+   El backend ejecuta las migraciones antes de iniciar. `web`, `api`, `postgres` y `mongo` deben figurar en ejecución y saludables. React usa el puerto 5173, NestJS el 3001 y PostgreSQL el 5433 del equipo; MongoDB queda dentro de la red de Compose.
 
-docker compose up -d --build
+3. Cargá datos nuevos para la demostración:
 
-## Direcciones
+   ```powershell
+   Invoke-RestMethod http://localhost:3001/api/v1/health/ready
+   node scripts/hito3-demo.cjs
+   notepad .demo-local.json
+   ```
 
-Frontend:
-http://localhost:5173
+   Ese archivo local incluye las cuentas de vendedor y comprador (correos de prueba y claves generadas), además de los productos. Conservá el archivo mientras usás esa misma base; el script reconoce una demo ya preparada. No lo subas a GitHub.
 
-Backend:
-http://localhost:3001
+4. Abrí [la web](http://localhost:5173) y entrá como vendedor. Buscá **Memoria RAM demo**; debe aparecer el filtro **Capacidad total mínima**. Elegí **16 GB**, abrí la ficha y probá **Editar precio** desde la tarjeta. Usá otro perfil de navegador o una ventana privada para iniciar sesión como comprador y comprobar el nuevo precio.
 
-API Health:
-http://localhost:3001/api/v1/health
+5. Probá PostgreSQL y MongoDB desde React:
 
-## Puertos
+   - En el catálogo del servidor, abrí **Teclado mecánico demo**. Desde **Consultar al vendedor**, enviá una pregunta.
+   - Agregá una unidad al carrito, elegí **Continuar con pedido simulado** y escribí un punto de retiro ficticio. Confirmá y abrí **Pedidos y ventas**.
+   - En **Actividad → Conversaciones e Interacciones**, comprobá el mensaje. Iniciá sesión como vendedor para verificar que le llegó.
+   - Si querés comprobar persistencia, reiniciá el mismo proyecto. Entrá de nuevo y consultá el pedido y la conversación.
 
-React: 5173
-NestJS: 3001 externo, 3000 interno
-PostgreSQL: 5433 externo, 5432 interno
-MongoDB: 27017 interno
+   ```powershell
+   docker compose -p nexustech-hito3-final restart
+   docker compose -p nexustech-hito3-final ps
+   ```
 
-## Comandos utiles
+6. En [Swagger](http://localhost:3001/docs), ejecutá primero **GET /api/v1/health/ready**. Para el caso de stock, iniciá sesión con el comprador de prueba en **POST /api/v1/auth/login**, usá su `accessToken` en **Authorize**, y ejecutá **PUT /api/v1/cart** con el ID del teclado y `quantity: 100`. La API devuelve **409** si supera el stock. Hacelo con la cuenta ficticia.
 
-Ver contenedores:
-docker compose ps
+7. Para detener el entorno conservando pedidos y mensajes:
 
-Ver logs:
-docker compose logs --tail=60 api
+   ```powershell
+   docker compose -p nexustech-hito3-final down
+   ```
 
-Detener servicios:
-docker compose down
+Si el paso 2 falla, revisá `docker compose -p nexustech-hito3-final logs --tail 80 api` y `ps`. Si un puerto está ocupado, detené primero la copia anterior que esté usando ese puerto. Si aparece autenticación fallida en una base, verificá que estés usando el mismo `.env` con el mismo proyecto y sus volúmenes. Cambiar la contraseña escrita en `.env` no cambia automáticamente las credenciales del motor inicializado. Los comandos de esta guía conservan los volúmenes.
 
-## Persistencia
-
-PostgreSQL utiliza el volumen postgres_data.
-MongoDB utiliza el volumen mongo_data.
-
-Los datos persisten al reiniciar los contenedores.
-No ejecutar docker compose down -v si se desea conservarlos.
-
-## Prueba reportada antes de esta auditoria
-
-- Inicio de los cuatro servicios.
-- Migraciones PostgreSQL ejecutadas.
-- Backend NestJS iniciado.
-- Frontend React iniciado.
-- Publicacion de un teclado gamer.
-- Consulta del producto mediante API REST.
-- Verificacion del registro directamente en PostgreSQL.
-- Persistencia comprobada luego de reiniciar API y React.
-
-## Pendientes
-
-- Verificar la funcionalidad real de MongoDB.
-- Completar las pruebas integrales del Hito 3.
-
-## Auditoria del 10 de noviembre
-
-Compose unico: compose.yaml. Configuracion validada con --env-file .env.example config --quiet. El intento up -d --build no pudo conectar al motor Docker Desktop Linux; esta sesion no certifica el inicio de los cuatro contenedores. Ver docs/hito3/MONGO_QA_2026-11-10.md y su informe de validacion.
-
-Mongo requiere MONGO_PASSWORD; usa autenticacion y red interna. Los volumenes existentes necesitan provisionar el usuario si fueron creados sin autenticacion. API readiness: /api/v1/health/ready. No eliminar volumenes para resolver incompatibilidades sin respaldar los datos.
+El HTML `nexustech-react/VISTA_PREVIA.html` y las páginas antiguas de la raíz son muestras de talleres anteriores. Para probar cuentas, comprar y enviar mensajes, usá la web iniciada por Compose.

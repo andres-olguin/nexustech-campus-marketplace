@@ -43,11 +43,23 @@ async function main() {
   assert.equal((await fetch('http://127.0.0.1:5173', { signal: AbortSignal.timeout(10000) })).status, 200);
   const openapi = await (await fetch('http://127.0.0.1:3001/docs-json')).json();
   assert.ok(openapi.paths['/api/v1/activity/interactions']);
+  assert.ok(openapi.paths['/api/v1/products/facets']);
   const run = randomBytes(6).toString('hex'), password = randomBytes(24).toString('hex');
   const register = role => http('/auth/register', 'POST', { name: 'Synthetic ' + role, email: role + '-' + run + '@example.test', password }, undefined, 201);
   const seller = await register('seller'), buyer = await register('buyer'), stranger = await register('stranger');
   const category = await http('/categories', 'POST', { name: 'CI ' + run }, seller.accessToken, 201);
-  const product = await http('/products', 'POST', { name: 'CI persistent keyboard', description: 'Synthetic keyboard for real Compose verification', categoryId: category.id, price: 15000, stock: 2 }, seller.accessToken, 201);
+  const product = await http('/products', 'POST', {
+    name: 'CI persistent RAM', description: 'Synthetic DDR4 RAM for real Compose verification',
+    categoryId: category.id, price: 15000, stock: 2,
+    technical: { profile: 'memory', text: '16 GB DDR4', values: { ramGb: 16, ramType: 'DDR4' } },
+  }, seller.accessToken, 201);
+  const options = await http('/products/facets?profile=memory&categoryId=' + category.id);
+  assert.ok(options.some(option => option.key === 'ramGb' && option.value === 16 && option.count === 1));
+  const productQuery = new URLSearchParams({ categoryId: category.id, profile: 'memory', facets: '{"ramGb":"16"}' });
+  assert.deepEqual((await http('/products?' + productQuery)).items.map(p => p.id), [product.id]);
+  await http('/products/' + product.id, 'PATCH', { price: 17000 }, buyer.accessToken, 403);
+  await http('/products/' + product.id, 'PATCH', { price: 17000 }, seller.accessToken);
+  assert.equal((await http('/products/' + product.id)).price, 17000);
   await http('/activity/interactions/me', 'GET', undefined, undefined, 401);
   const message = { targetId: product.id, targetType: 'product', receiverId: seller.user.id, message: 'Synthetic private message ' + run };
   const saved = await http('/activity/interactions', 'POST', message, buyer.accessToken, 201);
@@ -70,14 +82,18 @@ async function main() {
     assert.ok(Number(await dc(['exec', '-T', 'postgres', 'psql', '-U', 'nexustech', '-d', 'nexustech', '-At', '-c', 'SELECT count(*) FROM activity_outbox'])) > 0);
   } finally { await dc(['start', 'mongo']); }
   await until('Mongo outbox recovery', async () => (await http('/activity/logs/me', 'GET', undefined, seller.accessToken)).some(event => event.resourceId === product.id && event.eventName === 'product.updated'));
-  assert.ok(Number(await dc(['exec', '-T', 'postgres', 'psql', '-U', 'nexustech', '-d', 'nexustech', '-At', '-c', 'SELECT count(*) FROM migrations'])) >= 3);
+  assert.ok(Number(await dc(['exec', '-T', 'postgres', 'psql', '-U', 'nexustech', '-d', 'nexustech', '-At', '-c', 'SELECT count(*) FROM migrations'])) >= 4);
   await dc(['restart', 'postgres', 'mongo']);
   await until('PostgreSQL recovery', async () => (await http('/health')).database === 'up');
   await dc(['restart', 'api', 'web']);
   await until('four healthy services after restart', healthy);
   assert.equal((await http('/activity/interactions/me', 'GET', undefined, buyer.accessToken)).filter(item => item._id === saved._id).length, 1);
-  assert.equal((await http('/orders/' + orders[0].id, 'GET', undefined, buyer.accessToken)).status, 'preparing');
-  assert.equal((await http('/products/' + product.id)).stock, 1);
+  const order = await http('/orders/' + orders[0].id, 'GET', undefined, buyer.accessToken);
+  assert.equal(order.status, 'preparing');
+  assert.equal(order.total, 17000);
+  const persisted = await http('/products/' + product.id);
+  assert.equal(persisted.stock, 1);
+  assert.equal(persisted.technical.values.ramGb, 16);
   assert.match(buyer.user.id, /^[a-f0-9-]{36}$/i);
   const mongoCount = await dc(['exec', '-T', 'api', 'node', '-e',
     "const {MongoClient}=require('mongodb'); (async()=>{const c=new MongoClient(process.env.MONGODB_URI);try{await c.connect();console.log(await c.db('nexustech').collection('interactions').countDocuments({senderId:" + JSON.stringify(buyer.user.id) + "}));}finally{await c.close();}})().catch(()=>process.exitCode=1);"]);

@@ -1,3 +1,5 @@
+> **Entrega integrada:** el contrato ejecutable está en Swagger (/docs). Para las rutas de filtros técnicos y actividad, ver [ENTREGA_FINAL.md](ENTREGA_FINAL.md). Este documento registra el contrato previo y conserva sus ejemplos originales.
+
 ﻿# NexusTech API v1 — contrato de integración
 
 Base: http://localhost:3000/api/v1. Swagger: /docs; OpenAPI: /docs-json.
