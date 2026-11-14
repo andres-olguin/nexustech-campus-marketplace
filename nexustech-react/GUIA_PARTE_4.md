@@ -6,7 +6,7 @@
 2. Button.jsx: texto con children, ícono y variante.
 3. Field.jsx: etiqueta, control y mensaje de error.
 4. Navbar.jsx: enlaces y menú de celular.
-5. styles.css: colores y media queries al final.
+5. catalog.css: distribución del catálogo, precios y media queries; styles.css conserva los estilos comunes.
 6. CatalogPage.jsx: cómo reúne tarjetas, filtros y paginación.
 
 Dialog.jsx permite mostrar detalle, publicación y carrito. useShop.js pertenece al controlador que conecta las acciones.
@@ -36,11 +36,12 @@ Para demostrar los componentes, usamos un controlador de datos separado. La tarj
 | 3 | Abrir un detalle y agregar un producto. | Dialog se reutiliza y CartPanel presenta el resultado. |
 | 4 | Abrir Publicar y enviar el formulario vacío. | Field muestra los errores y el foco va al primer campo inválido. |
 | 5 | Reducir el ancho de la ventana. | Cambian columnas, menú y filtros. |
-| 6 | Abrir contacto y rastreo. | Se conserva una identidad visual común. |
+| 6 | Editar el precio de una publicación propia. | El formulario valida el importe y el controlador actualiza catálogo y carrito. |
+| 7 | Abrir contacto y rastreo. | Se conserva una identidad visual común. |
 
 Para mostrar el flujo completo del equipo, agregar un producto, abrir el carrito, completar el despacho con datos de ejemplo y pulsar Confirmar pedido simulado. El código generado puede consultarse en Rastreo.
 
-La función de referencia USD se consulta desde los filtros. Mostrá su carga, la fecha del dato y, si no hay conexión, el mensaje de error y el reintento.
+Elige **CLP + USD** en la barra de moneda, encima de las tarjetas. Mostrá la fecha de la referencia y el botón de actualización. Si ya hay un dato guardado, la conversión sigue visible mientras llega la nueva respuesta.
 
 ## Ejemplo de props para estudiar
 
@@ -96,7 +97,7 @@ Que la distribución se adapta al espacio. Las tarjetas usan tres, dos o una col
 
 **¿Qué aporta Bootstrap?**
 
-Su CSS para controles y utilidades. El diseño oscuro con cian y la distribución principal están definidos en styles.css. Las interacciones se controlan con React.
+Su CSS para controles y utilidades. El diseño oscuro con cian está en styles.css; catalog.css organiza el catálogo y las tarjetas. Las interacciones se controlan con React.
 
 **¿Qué se guarda al recargar?**
 
