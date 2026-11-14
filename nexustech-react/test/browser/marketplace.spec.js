@@ -334,10 +334,10 @@ test("Real browser registration → publication/edit → favorites/cart → mult
   await buyer.close();
   await third.close();
 });
-test("Mobile navigation and responsive layout, 390px and 768px", async ({
+test("Mobile navigation, collapsible filters and responsive layout, 375px, 390px and 768px", async ({
   page,
 }) => {
-  for (const width of [390, 768]) {
+  for (const width of [375, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/#/catalogo");
     await expect(
@@ -347,6 +347,11 @@ test("Mobile navigation and responsive layout, 390px and 768px", async ({
       }),
     ).toBeVisible();
     await expect(page.getByText("Cargando publicaciones…")).toHaveCount(0);
+    const filters = page.getByRole("button", { name: "Filtros", exact: true });
+    await expect(filters).toHaveAttribute("aria-expanded", "false");
+    await filters.click();
+    await expect(page.getByLabel("Tipo de producto")).toBeVisible();
+    await filters.click();
     const overflow = await page.evaluate(() => ({
       width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
       elements: [...document.querySelectorAll("body *")].filter(el => {
@@ -537,17 +542,19 @@ test("React sends private messages to real MongoDB and reads them after reload",
   const category = await (await request.post(api + "/categories", { headers, data: { name: "Mongo " + run } })).json();
   const product = await (await request.post(api + "/products", { headers, data: { name: "Mongo product " + run, description: "Real Mongo browser integration", categoryId: category.id, price: 15000, stock: 2 } })).json();
   await register(page, "mongo-buyer-" + run + "@example.test", "Mongo Buyer");
-  await nav(page, "historial");
-  await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
-  await page.locator("form input").first().fill(product.id);
-  await page.getByLabel("UUID del destinatario").fill(seller.user.id);
+  await nav(page, "catalogo");
+  await page.getByLabel("Buscar productos").fill(product.name);
+  await page.getByRole("button", { name: "Ver detalle de " + product.name, exact: true }).click();
+  await page.getByText("Consultar al vendedor", { exact: true }).click();
   const message = "Pregunta persistente " + run;
-  await page.locator("form textarea").fill(message);
+  await page.getByLabel("Tu pregunta").fill(message);
   const saved = page.waitForResponse(r => r.url() === api + "/activity/interactions" && r.request().method() === "POST");
-  await page.locator("form button[type=submit]").click();
+  await page.getByRole("button", { name: "Enviar consulta" }).click();
   const response = await saved;
   expect(response.status()).toBe(201);
   expect((await response.json())._id).toMatch(/^[a-f0-9]{24}$/i);
+  await page.getByRole("link", { name: "Ver actividad", exact: true }).click();
+  await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
   await expect(page.getByText(message, { exact: true })).toBeVisible();
   await page.reload();
   // Session tokens intentionally live only in memory: authenticate again after reload.
@@ -555,4 +562,75 @@ test("React sends private messages to real MongoDB and reads them after reload",
   await nav(page, "historial");
   await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
   await expect(page.getByText(message, { exact: true })).toBeVisible();
+});
+
+test("A RAM publication is filtered by capacity and its owner can change the price for all sessions", async ({ page, browser, request }) => {
+  const run = randomUUID().slice(0, 8);
+  const email = "ram-seller-" + run + "@example.test";
+  const name = "Memoria RAM de prueba " + run;
+  await register(page, email, "Vendedor RAM");
+  const token = (await (await request.post(api + "/auth/login", { data: { email, password } })).json()).accessToken;
+  const categoryResponse = await request.post(api + "/categories", {
+    headers: { Authorization: "Bearer " + token }, data: { name: "Prueba RAM " + run },
+  });
+  expect(categoryResponse.status()).toBe(201);
+  const category = await categoryResponse.json();
+  const dialog = page.getByRole("dialog");
+  await nav(page, "catalogo");
+  await page.getByRole("button", { name: "Actualizar", exact: true }).click();
+  await page.getByRole("button", { name: "Publicar mi equipo", exact: true }).click();
+  await dialog.getByLabel("Nombre del producto").fill(name);
+  await dialog.getByLabel("Descripción", { exact: true }).fill("Kit RAM para la comprobación del catálogo");
+  await dialog.getByLabel("Categoría", { exact: true }).selectOption(category.id);
+  await dialog.getByLabel("Precio en CLP", { exact: true }).fill("45000");
+  await dialog.getByText("Datos para los filtros", { exact: false }).click();
+  await dialog.getByLabel("Tipo de producto").selectOption("memory");
+  await dialog.getByLabel("Especificaciones técnicas").fill("2×8 GB DDR4 DIMM, 3200 MT/s");
+  const published = page.waitForResponse(r => r.url() === api + "/products" && r.request().method() === "POST");
+  await dialog.getByRole("button", { name: "Publicar producto", exact: true }).click();
+  expect((await published).status()).toBe(201);
+  await expect(dialog).not.toBeVisible();
+  await page.getByLabel("Buscar productos").fill(name);
+  await expect(page.getByLabel("Buscar productos")).toHaveValue(name);
+  const capacity = page.getByLabel("Capacidad total mínima");
+  await expect(capacity).toBeVisible();
+  await capacity.selectOption("16");
+  await page.getByRole("button", { name: "Editar precio de " + name }).click();
+  await dialog.getByLabel("Nuevo precio en CLP").fill("48000");
+  await dialog.getByRole("button", { name: "Guardar precio" }).click();
+  await expect(dialog).not.toBeVisible();
+  const other = await browser.newPage();
+  try {
+    await other.goto(ui + "/#/catalogo");
+    await other.getByLabel("Buscar productos").fill(name);
+    const card = other.locator("article.nt-product-card").filter({ hasText: name });
+    await expect(card).toContainText("48.000");
+    await expect(card.getByRole("button", { name: /Editar precio/ })).toHaveCount(0);
+  } finally { await other.close(); }
+});
+
+test("Demo details can traverse pages; a USD failure preserves the last valid reference", async ({ page }) => {
+  await page.goto(ui + "/#/catalogo");
+  await page.getByRole("button", { name: "Ver catálogo demo (240)" }).click();
+  await expect(page.locator("article.nt-product-card")).toHaveCount(24);
+  const last = page.getByRole("button", { name: "Ver detalle", exact: true }).last();
+  await last.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Artículo 24 de 240")).toBeVisible();
+  await dialog.getByRole("button", { name: "Artículo siguiente" }).click();
+  await expect(dialog.getByText("Artículo 25 de 240")).toBeVisible();
+  await dialog.getByRole("button", { name: "Artículo anterior" }).click();
+  await expect(dialog.getByText("Artículo 24 de 240")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cerrar ventana" }).click();
+  await page.route("https://mindicador.cl/api/dolar", route => route.fulfill({
+    status: 200, json: { codigo: "dolar", serie: [{ fecha: new Date().toISOString(), valor: 950 }] },
+  }));
+  await page.getByRole("button", { name: "CLP + USD", exact: true }).click();
+  await expect(page.getByText("1 USD = 950 CLP")).toBeVisible();
+  await expect(page.locator(".nt-price-usd").first()).toContainText("US");
+  await page.unroute("https://mindicador.cl/api/dolar");
+  await page.route("https://mindicador.cl/api/dolar", route => route.fulfill({ status: 503 }));
+  await page.getByRole("button", { name: "Actualizar referencia USD" }).click();
+  await expect(page.getByText("No se pudo actualizar. Se conserva la última referencia guardada.")).toBeVisible();
+  await expect(page.getByText("1 USD = 950 CLP")).toBeVisible();
 });

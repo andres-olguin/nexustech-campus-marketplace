@@ -215,3 +215,10 @@
   .nt-product-card, .nt-filter-toggle .nt-icon, .nt-facet-group .nt-icon, .nt-product-specs .nt-icon { transition: none; }
   .nt-spinner { animation: none; }
 }
+.nt-marketplace-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.nt-marketplace-filter-heading .nt-marketplace-filter-toggle { display: none; }
+.nt-technical-label { margin: 14px 0 8px; font-size: .9rem; }
+@media (max-width: 991.98px) {
+  .nt-marketplace-filter-heading .nt-marketplace-filter-toggle { display: inline-flex; }
+  .nt-marketplace-filters[data-open="false"] { display: none; }
+}

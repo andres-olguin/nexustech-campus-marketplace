@@ -6,18 +6,30 @@ import Button from "../components/ui/Button.jsx";
 import Field from "../components/ui/Field.jsx";
 import Alert from "../components/ui/Alert.jsx";
 import EmptyState from "../components/ui/EmptyState.jsx";
+import ExchangeRatePanel from "../components/catalog/ExchangeRatePanel.jsx";
+import { TechnicalFilters } from "../components/catalog/FilterPanel.jsx";
+import { GENERAL_PROFILE, PRODUCT_PROFILES, profileForId, profileForProduct } from "../data/filterProfiles.js";
+import { catalogSearch, facetCatalog, filterCatalog } from "../utils/catalog.js";
+import { demoFilterSource, optionsFromApi } from "../utils/connectedCatalog.js";
 import { useRemote } from "../hooks/useShop.js";
 import { DEMO_CATEGORIES, getDemoCatalog } from "../data/demoCatalog.js";
 
 const DEMO_PAGE_LIMIT = 24;
+const LIVE_PAGE_LIMIT = 20;
+const NO_FACETS = {};
 
 export default function CatalogPage({
   shop,
   favoriteOnly,
   onDetail,
   onEdit,
+  onPrice,
   onArchive,
   onPublish,
+  exchange,
+  showUSD,
+  onCurrency,
+  usdRate,
 }) {
   const [demoMode, setDemoMode] = useState(false);
   const [search, setSearch] = useState("");
@@ -28,6 +40,9 @@ export default function CatalogPage({
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [page, setPage] = useState(1);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [typeChoice, setTypeChoice] = useState("");
+  const [technical, setTechnical] = useState({ profile: null, selections: NO_FACETS });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -37,119 +52,86 @@ export default function CatalogPage({
     return () => clearTimeout(timer);
   }, [search]);
 
+  const isDemoActive = demoMode && !favoriteOnly;
+  const hint = useMemo(() => catalogSearch(debounced).profile, [debounced]);
+  const categories = shop.categories.data || [];
+  const inferredType = hint || catalogSearch(
+    isDemoActive ? subcategoryFilter || categoryId : categories.find(c => c.id === categoryId)?.name || "",
+  ).profile;
+  const profile = profileForId(typeChoice) || inferredType || GENERAL_PROFILE;
+  const selections = technical.profile === profile.id ? technical.selections : NO_FACETS;
+  const encoded = Object.keys(selections).length ? JSON.stringify(selections) : undefined;
+  const liveProfile = typeChoice || (encoded && profile.id !== "general" ? profile.id : undefined);
+  const baseQuery = { search: debounced, categoryId, maxPrice };
+  const liveQuery = { ...baseQuery, profile: liveProfile, facets: encoded, sort: sortBy, limit: LIVE_PAGE_LIMIT };
   const result = useRemote(
-    (signal) => {
-      if (demoMode && !favoriteOnly) return null;
-      return favoriteOnly
-        ? shop.session
-          ? shop.api.favorites(page, signal)
-          : null
-        : shop.api.products(
-            { page, limit: 20, search: debounced, categoryId, maxPrice },
-            signal,
-          );
-    },
-    [
-      shop.api,
-      shop.revision,
-      shop.session,
-      favoriteOnly,
-      demoMode,
-      page,
-      debounced,
-      categoryId,
-      maxPrice,
-    ],
+    (signal) => isDemoActive ? null : favoriteOnly
+      ? (shop.session ? shop.api.favorites(page, signal) : null)
+      : shop.api.products({ ...liveQuery, page }, signal),
+    [shop.api, shop.revision, shop.session, favoriteOnly, isDemoActive, page, debounced, categoryId, maxPrice, liveProfile, encoded, sortBy],
+  );
+  const optionsProfile = profile.id === "general" ? undefined : profile.id;
+  const remoteOptions = useRemote(
+    (signal) => favoriteOnly || isDemoActive || !optionsProfile ? null :
+      shop.api.catalogFacets({ ...baseQuery, profile: optionsProfile }, signal),
+    [shop.api, shop.revision, favoriteOnly, isDemoActive, debounced, categoryId, maxPrice, optionsProfile],
   );
 
-  const demoAll = useMemo(() => (demoMode ? getDemoCatalog() : []), [demoMode]);
-
-  const demoSubcategories = useMemo(() => {
-    if (!demoMode) return [];
-    const pool = categoryId
-      ? demoAll.filter((p) => p.category === categoryId)
-      : demoAll;
-    return [...new Set(pool.map((p) => p.subcategory).filter(Boolean))].sort();
-  }, [demoMode, demoAll, categoryId]);
-
+  const demoAll = useMemo(() => isDemoActive ? getDemoCatalog().map(demoFilterSource) : [], [isDemoActive]);
+  const demoSubcategories = useMemo(() => [...new Set(demoAll
+    .filter(p => !categoryId || p.category === categoryId)
+    .map(p => p.subcategory).filter(Boolean))].sort(), [demoAll, categoryId]);
   const demoFiltered = useMemo(() => {
-    if (!demoMode) return [];
-    const term = debounced.toLowerCase();
-    const maxP = maxPrice !== "" ? Number(maxPrice) : null;
-    const filtered = demoAll.filter((p) => {
-      if (categoryId && p.category !== categoryId) return false;
-      if (subcategoryFilter && p.subcategory !== subcategoryFilter) return false;
-      if (conditionFilter && p.condition !== conditionFilter) return false;
-      if (maxP !== null && p.price > maxP) return false;
-      if (
-        term &&
-        !p.name.toLowerCase().includes(term) &&
-        !p.description.toLowerCase().includes(term) &&
-        !p.category.toLowerCase().includes(term) &&
-        !(p.subcategory || "").toLowerCase().includes(term) &&
-        !(p.specs || []).some((s) => s.toLowerCase().includes(term))
-      ) {
-        return false;
-      }
-      return true;
+    if (!isDemoActive) return { results: [], options: {} };
+    const pool = demoAll.filter(p => (!subcategoryFilter || p.subcategory === subcategoryFilter) &&
+      (!conditionFilter || p.condition === conditionFilter) &&
+      (!typeChoice || profileForProduct(p).id === typeChoice));
+    const filtered = filterCatalog(pool, { query: debounced, category: categoryId || "all", maxPrice: maxPrice === "" ? Infinity : Number(maxPrice) });
+    if (sortBy === "price-asc") filtered.sort((a,b) => a.price - b.price);
+    if (sortBy === "price-desc") filtered.sort((a,b) => b.price - a.price);
+    if (sortBy === "name-asc") filtered.sort((a,b) => a.name.localeCompare(b.name, "es"));
+    if (sortBy === "name-desc") filtered.sort((a,b) => b.name.localeCompare(a.name, "es"));
+    return facetCatalog(filtered, selections, profile.fields);
+  }, [isDemoActive, demoAll, subcategoryFilter, conditionFilter, typeChoice, debounced, categoryId, maxPrice, sortBy, selections, profile]);
+
+  const options = useMemo(() => isDemoActive ? demoFiltered.options :
+    optionsFromApi(profile.fields, remoteOptions.data || [], selections),
+    [isDemoActive, demoFiltered, profile, remoteOptions.data, selections]);
+  const categoryNames = new Map(categories.map(c => [c.id, c.name]));
+  const data = isDemoActive ? {
+    items: demoFiltered.results.slice((page - 1) * DEMO_PAGE_LIMIT, page * DEMO_PAGE_LIMIT),
+    page, limit: DEMO_PAGE_LIMIT, total: demoFiltered.results.length,
+  } : result.data;
+  const extract = (found) => favoriteOnly ? found.items.map(f => f.product) : found.items;
+  const products = data ? extract(data) : [];
+  const pageCount = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+  useEffect(() => {
+    if (data && page > pageCount) setPage(pageCount);
+  }, [data, page, pageCount]);
+
+  function inspect(product, index) {
+    const offset = (data.page - 1) * data.limit;
+    onDetail(product, {
+      items: products,
+      page: data.page,
+      limit: data.limit,
+      index: offset + index,
+      count: data.total,
+      async loadPage(next, signal) {
+        if (isDemoActive) return demoFiltered.results.slice((next - 1) * DEMO_PAGE_LIMIT, next * DEMO_PAGE_LIMIT);
+        const found = favoriteOnly ? await shop.api.favorites(next, signal) : await shop.api.products({ ...liveQuery, page: next }, signal);
+        return extract(found);
+      },
     });
+  }
 
-    if (sortBy === "price-asc") {
-      return [...filtered].sort((a, b) => a.price - b.price);
-    }
-    if (sortBy === "price-desc") {
-      return [...filtered].sort((a, b) => b.price - a.price);
-    }
-    if (sortBy === "name-asc") {
-      return [...filtered].sort((a, b) => a.name.localeCompare(b.name, "es"));
-    }
-    if (sortBy === "name-desc") {
-      return [...filtered].sort((a, b) => b.name.localeCompare(a.name, "es"));
-    }
-    return filtered;
-  }, [
-    demoMode,
-    demoAll,
-    debounced,
-    categoryId,
-    subcategoryFilter,
-    conditionFilter,
-    maxPrice,
-    sortBy,
-  ]);
-
-  const categories = shop.categories.data || [];
-  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
-
-  const isDemoActive = demoMode && !favoriteOnly;
-  const data = isDemoActive
-    ? {
-        items: demoFiltered.slice(
-          (page - 1) * DEMO_PAGE_LIMIT,
-          page * DEMO_PAGE_LIMIT,
-        ),
-        page,
-        limit: DEMO_PAGE_LIMIT,
-        total: demoFiltered.length,
-      }
-    : result.data;
-
-  const rawProducts = favoriteOnly
-    ? data?.items.map((f) => f.product) || []
-    : data?.items || [];
-
-  const products = useMemo(() => {
-    if (isDemoActive || sortBy === "default") return rawProducts;
-    if (sortBy === "price-asc")
-      return [...rawProducts].sort((a, b) => a.price - b.price);
-    if (sortBy === "price-desc")
-      return [...rawProducts].sort((a, b) => b.price - a.price);
-    if (sortBy === "name-asc")
-      return [...rawProducts].sort((a, b) => a.name.localeCompare(b.name, "es"));
-    if (sortBy === "name-desc")
-      return [...rawProducts].sort((a, b) => b.name.localeCompare(a.name, "es"));
-    return rawProducts;
-  }, [isDemoActive, rawProducts, sortBy]);
+  function pickFacet(key, value) {
+    const next = { ...selections };
+    if (value) next[key] = value;
+    else delete next[key];
+    setTechnical({ profile: profile.id, selections: next });
+    setPage(1);
+  }
 
   function switchMode(enableDemo) {
     setDemoMode(enableDemo);
@@ -160,6 +142,8 @@ export default function CatalogPage({
     setDebounced("");
     setMaxPrice("");
     setSortBy("default");
+    setTypeChoice("");
+    setTechnical({ profile: null, selections: NO_FACETS });
     setPage(1);
   }
 
@@ -218,9 +202,16 @@ export default function CatalogPage({
         </Alert>
       )}
 
+      <ExchangeRatePanel exchange={exchange} showUSD={showUSD} onCurrency={onCurrency} />
       <div className="nt-catalog-layout">
         <aside className="nt-filter-panel">
-          <h2>Explorar</h2>
+          <div className="nt-marketplace-filter-heading">
+            <h2>Explorar</h2>
+            {!favoriteOnly && <Button variant="ghost" className="nt-marketplace-filter-toggle"
+              aria-controls="marketplace-filters" aria-expanded={mobileFiltersOpen}
+              icon="filter" onClick={() => setMobileFiltersOpen(open => !open)}>Filtros</Button>}
+          </div>
+          <div className="nt-marketplace-filters" id="marketplace-filters" data-open={mobileFiltersOpen || favoriteOnly}>
           <p>Precios en CLP. El inventario real se confirma en el servidor.</p>
           {!favoriteOnly && (
             <>
@@ -231,6 +222,8 @@ export default function CatalogPage({
                 onChange={(e) => {
                   setCategory(e.target.value);
                   setSubcategoryFilter("");
+                  setTypeChoice("");
+                  setTechnical({ profile: null, selections: NO_FACETS });
                   setPage(1);
                 }}
               >
@@ -255,6 +248,8 @@ export default function CatalogPage({
                   value={subcategoryFilter}
                   onChange={(e) => {
                     setSubcategoryFilter(e.target.value);
+                    setTypeChoice("");
+                    setTechnical({ profile: null, selections: NO_FACETS });
                     setPage(1);
                   }}
                 >
@@ -319,10 +314,25 @@ export default function CatalogPage({
                   }
                 }}
               />
+              <Field label="Tipo de producto" as="select" value={typeChoice}
+                onChange={e => {
+                  setTypeChoice(e.target.value);
+                  setTechnical({ profile: null, selections: NO_FACETS });
+                  setPage(1);
+                }}>
+                <option value="">Automático según la búsqueda</option>
+                {PRODUCT_PROFILES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </Field>
+              {profile.label && <p className="nt-technical-label">Filtros para <strong>{profile.label}</strong></p>}
+              <TechnicalFilters profile={profile} options={options} selections={selections} onChange={pickFacet} />
+              {!isDemoActive && remoteOptions.status === "error" && <p className="nt-muted" role="status">No se pudieron cargar las opciones técnicas.</p>}
               <Button
                 variant="ghost"
                 onClick={() => {
                   setSearch("");
+                  setDebounced("");
+                  setTypeChoice("");
+                  setTechnical({ profile: null, selections: NO_FACETS });
                   setCategory("");
                   setSubcategoryFilter("");
                   setConditionFilter("");
@@ -344,6 +354,7 @@ export default function CatalogPage({
           <a className="nt-text-link" href="#/acceso">
             Gestionar mi perfil y categorías
           </a>
+          </div>
         </aside>
 
         <section
@@ -392,7 +403,13 @@ export default function CatalogPage({
               placeholder="Nombre, categoría, subcategoría o especificación"
               value={search}
               maxLength={160}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (catalogSearch(value).profile?.id !== hint?.id) {
+                  setTechnical({ profile: null, selections: NO_FACETS });
+                }
+                setSearch(value);
+              }}
             />
           )}
 
@@ -418,7 +435,7 @@ export default function CatalogPage({
             </Alert>
           ) : !products.length ? (
             <EmptyState
-              title="No hay publicaciones para mostrar"
+              title={favoriteOnly ? "No hay publicaciones para mostrar" : "No hay productos relacionados a esto"}
               description={
                 isDemoActive
                   ? "Ningún producto de demostración coincide con los filtros actuales."
@@ -435,7 +452,7 @@ export default function CatalogPage({
           ) : (
             <>
               <div className="nt-product-grid">
-                {products.map((p) => (
+                {products.map((p, index) => (
                   <ProductCard
                     key={p.id}
                     product={p}
@@ -443,7 +460,9 @@ export default function CatalogPage({
                     own={!p.isDemo && p.sellerId === shop.user?.id}
                     favorite={!p.isDemo && shop.favoriteSet.has(p.id)}
                     onFavorite={favorite}
-                    onDetail={onDetail}
+                    onDetail={() => inspect(p, index)}
+                    usdRate={usdRate}
+                    onPrice={onPrice}
                     onAdd={add}
                     onEdit={onEdit}
                     onArchive={onArchive}
@@ -456,7 +475,7 @@ export default function CatalogPage({
               </div>
               <Pagination
                 page={page}
-                totalPages={Math.max(1, Math.ceil(data.total / data.limit))}
+                totalPages={pageCount}
                 onChange={setPage}
               />
             </>

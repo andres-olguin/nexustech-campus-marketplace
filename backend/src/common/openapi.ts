@@ -19,7 +19,8 @@ export function addResponseSchemas(document: OpenAPIObject) {
     SellerProfile: record({ userId: uuid, displayName: text }),
     UserProfile: record({ email: text, name: text, buyerProfile: ref('BuyerProfile'), sellerProfile: ref('SellerProfile') }),
     Category: record({ name: text, ownerId: uuid }),
-    Product: record({ name: text, description: text, categoryId: uuid, sellerId: uuid, price: { type: 'integer', minimum: 1000, maximum: 2500000 }, stock: { type: 'integer', minimum: 0, maximum: 100000 }, imageUrl: { type: 'string', nullable: true }, isActive: { type: 'boolean' }, updatedAt: date }),
+    Product: record({ name: text, description: text, categoryId: uuid, sellerId: uuid, price: { type: 'integer', minimum: 1000, maximum: 2500000 }, stock: { type: 'integer', minimum: 0, maximum: 100000 }, imageUrl: { type: 'string', nullable: true }, technical: { type: 'object', nullable: true, allOf: [ref('TechnicalDto')] }, isActive: { type: 'boolean' }, updatedAt: date }),
+    CatalogFacetOption: object({ key: text, value: { oneOf: [text, { type: 'number' }] }, count: integer }),
     CartItem: record({ userId: uuid, productId: uuid, quantity: integer }),
     CartItemWithProduct: record({ userId: uuid, productId: uuid, quantity: integer, product: ref('Product') }),
     Cart: object({ items: array(ref('CartItemWithProduct')), total: integer }),
@@ -48,6 +49,7 @@ export function addResponseSchemas(document: OpenAPIObject) {
       else if (path.includes('/auth/')) schema = ref('Session');
       else if (path.endsWith('/users/me')) schema = ref('UserProfile');
       else if (path.includes('/categories')) schema = path.endsWith('/categories') && method === 'get' ? array(ref('Category')) : ref('Category');
+      else if (path.endsWith('/products/facets')) schema = array(ref('CatalogFacetOption'));
       else if (path.includes('/products') || path.includes('/publications')) schema = (path.endsWith('/products') || path.endsWith('/publications')) && method === 'get' ? page('Product') : ref('Product');
       else if (path.includes('/cart')) schema = ref(method === 'get' ? 'Cart' : 'CartItem');
       else if (path.includes('/favorites')) schema = method === 'get' ? page('FavoriteWithProduct') : ref('Favorite');

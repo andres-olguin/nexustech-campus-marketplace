@@ -8,12 +8,15 @@ import CartPanel from "./components/shop/CartPanel.jsx";
 import CheckoutForm from "./components/shop/CheckoutForm.jsx";
 import ProductDetail from "./components/shop/ProductDetail.jsx";
 import PublishForm from "./components/shop/PublishForm.jsx";
+import EditPriceForm from "./components/shop/EditPriceForm.jsx";
+import DetailNavigation from "./components/shop/DetailNavigation.jsx";
 import CatalogPage from "./pages/CatalogPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import TrackingPage from "./pages/TrackingPage.jsx";
 import InteractionsPage from "./pages/InteractionsPage.jsx";
 import useHashRoute from "./hooks/useHashRoute.js";
 import useShop from "./hooks/useShop.js";
+import useExchangeRate from "./hooks/useExchangeRate.js";
 import { formatCLP } from "./utils/format.js";
 export default function App() {
   const shop = useShop();
@@ -22,12 +25,26 @@ export default function App() {
   const previous = useRef(route);
   const [dialog, setDialog] = useState(null);
   const [dialogError, setDialogError] = useState("");
+  const [moving, setMoving] = useState(false);
+  const detailRequest = useRef(null);
+  const exchange = useExchangeRate();
+  const [showUSD, setShowUSD] = useState(false);
+  const usdRate = showUSD ? exchange.rate?.value : null;
+  function cancelMove() {
+    detailRequest.current?.abort();
+    detailRequest.current = null;
+    setMoving(false);
+  }
   function open(value) {
+    cancelMove();
     setDialogError("");
     setDialog(value);
   }
   function close() {
-    if (!shop.busy) setDialog(null);
+    if (!shop.busy) {
+      cancelMove();
+      setDialog(null);
+    }
   }
   function protectedOpen(value) {
     if (!shop.user) {
@@ -38,6 +55,7 @@ export default function App() {
   }
   useEffect(() => {
     if (previous.current !== route) {
+      cancelMove();
       setDialog(null);
       main.current?.focus({ preventScroll: true });
       globalThis.scrollTo({ top: 0 });
@@ -54,19 +72,44 @@ export default function App() {
       }[route] || "Catálogo") + " · NexusTech";
   }, [route]);
   useEffect(() => {
-    if (!shop.session) setDialog(null);
+    if (!shop.session) {
+      cancelMove();
+      setDialog(null);
+    }
   }, [shop.session]);
-  async function detail(target) {
-    if (target && typeof target === "object" && target.isDemo) {
-      open({ type: "detail", product: target });
-      return;
-    }
+  function detail(product, navigation) {
+    open({ type: "detail", product, navigation });
+  }
+  async function moveDetail(direction) {
+    const nav = dialog?.navigation;
+    if (!nav || detailRequest.current || shop.busy) return;
+    const index = nav.index + direction;
+    if (index < 0 || index >= nav.count) return;
+    const page = Math.floor(index / nav.limit) + 1;
+    const request = new AbortController();
+    detailRequest.current = request;
+    setDialogError("");
+    setMoving(true);
     try {
-      const product = await shop.api.product(target);
-      open({ type: "detail", product });
+      const items = page === nav.page ? nav.items : await nav.loadPage(page, request.signal);
+      if (request.signal.aborted) return;
+      const product = items[index % nav.limit];
+      if (!product) throw new Error("Los resultados cambiaron. Cierra el detalle y actualiza el catálogo.");
+      setDialog(current => current?.navigation === nav
+        ? { ...current, product, navigation: { ...nav, index, page, items } }
+        : current);
     } catch (error) {
-      shop.setNotice({ tone: "error", message: error.message });
+      if (!request.signal.aborted) setDialogError(error.message);
+    } finally {
+      if (detailRequest.current === request) {
+        detailRequest.current = null;
+        setMoving(false);
+      }
     }
+  }
+  async function savePrice(price) {
+    await shop.run(() => shop.api.edit(dialog.product.id, { price }), "Precio actualizado en el servidor.");
+    setDialog(null);
   }
   async function publish(body) {
     await shop.run(
@@ -98,6 +141,7 @@ export default function App() {
     checkout: "Confirmar pedido simulado",
     publish: "Publicar producto",
     edit: "Editar producto",
+    price: "Editar precio",
     archive: "Archivar publicación",
     detail: dialog?.product?.name,
     confirmed: "Pedido registrado · SIMULADO",
@@ -148,8 +192,13 @@ export default function App() {
             favoriteOnly={route === "favoritos"}
             onDetail={detail}
             onEdit={(product) => open({ type: "edit", product })}
+            onPrice={(product) => open({ type: "price", product })}
             onArchive={(product) => open({ type: "archive", product })}
             onPublish={() => protectedOpen({ type: "publish" })}
+            exchange={exchange}
+            showUSD={showUSD}
+            onCurrency={setShowUSD}
+            usdRate={usdRate}
           />
         )}
         {route === "acceso" && (
@@ -171,6 +220,19 @@ export default function App() {
         onClose={close}
         wide={dialog?.type === "detail"}
         drawer={dialog?.type === "cart"}
+        viewKey={dialog?.type === "detail" ? dialog.product.id : undefined}
+        navigation={dialog?.navigation && (
+          <DetailNavigation index={dialog.navigation.index} count={dialog.navigation.count}
+            onMove={moveDetail} busy={moving || shop.busy} />
+        )}
+        onKeyDown={event => {
+          if (!dialog?.navigation || event.altKey || event.ctrlKey || event.metaKey ||
+            event.target.closest("input, select, textarea, [contenteditable]")) return;
+          if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+            event.preventDefault();
+            void moveDetail(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
       >
         {dialogError && <Alert tone="error">{dialogError}</Alert>}
         {dialog?.type === "cart" && (
@@ -184,8 +246,13 @@ export default function App() {
             key={dialog.product.id}
             product={dialog.product}
             shop={shop}
+            usdRate={usdRate}
             onAdded={() => open({ type: "cart" })}
           />
+        )}
+        {dialog?.type === "price" && (
+          <EditPriceForm product={dialog.product} usdRate={usdRate} busy={shop.busy}
+            onSave={savePrice} onCancel={close} />
         )}
         {(dialog?.type === "publish" || dialog?.type === "edit") && (
           <PublishForm

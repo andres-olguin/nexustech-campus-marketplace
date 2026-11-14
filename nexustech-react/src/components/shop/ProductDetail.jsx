@@ -5,14 +5,23 @@ import ProductImage from "../ui/ProductImage.jsx";
 import Alert from "../ui/Alert.jsx";
 import Badge from "../ui/Badge.jsx";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
-import { formatCLP } from "../../utils/format.js";
+import PriceDisplay from "../ui/PriceDisplay.jsx";
+import { SPEC_FIELDS } from "../../data/filterProfiles.js";
+import { formatSpecValue } from "../../utils/productSpecs.js";
 
-export default function ProductDetail({ product: p, shop, onAdded }) {
+export default function ProductDetail({ product: p, shop, onAdded, usdRate }) {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
+  const [asked, setAsked] = useState(false);
+  const [messageError, setMessageError] = useState("");
   const isDemo = Boolean(p.isDemo);
   const own = !isDemo && shop.user?.id === p.sellerId;
-  const specs = Array.isArray(p.specs) ? p.specs : [];
+  const specs = isDemo ? p.specs || [] : SPEC_FIELDS.filter(({ key, source }) =>
+    !source && p.technical?.values?.[key] !== undefined).map(def => {
+      const v = p.technical.values[def.key];
+      return def.label.replace(/\s+m[ií]nim[oa]|\s+m[aá]xim[oa]/gi, "") + ": " +
+        (Array.isArray(v) ? v : [v]).map(value => formatSpecValue(def, value)).join(", ");
+    });
 
   async function add() {
     if (isDemo) return;
@@ -28,6 +37,25 @@ export default function ProductDetail({ product: p, shop, onAdded }) {
       onAdded();
     } catch (err) {
       setError(err.message);
+    }
+  }
+  async function ask(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = new FormData(form).get("message").trim();
+    if (message.length < 2) {
+      setMessageError("Escribe una pregunta de al menos 2 caracteres.");
+      return;
+    }
+    setMessageError("");
+    try {
+      await shop.run(() => shop.api.createInteraction({
+        targetId: p.id, receiverId: p.sellerId, targetType: "product", message,
+      }));
+      form.reset();
+      setAsked(true);
+    } catch (err) {
+      setMessageError(err.message);
     }
   }
 
@@ -63,7 +91,7 @@ export default function ProductDetail({ product: p, shop, onAdded }) {
           </div>
 
           <h3>{p.name}</h3>
-          <strong className="nt-detail-price">{formatCLP(p.price)}</strong>
+          <PriceDisplay amount={p.price} usdRate={usdRate} className="nt-detail-price" />
           <p>{p.description}</p>
 
           {specs.length > 0 && (
@@ -122,12 +150,28 @@ export default function ProductDetail({ product: p, shop, onAdded }) {
               <p className="nt-muted nt-detail-note">
                 El stock se valida nuevamente al confirmar el pedido en el servidor.
               </p>
+              {!own && p.isActive && (
+                <details className="nt-product-specs">
+                  <summary>Consultar al vendedor</summary>
+                  <div className="nt-product-specs-body">
+                    {shop.user ? (
+                      <form onSubmit={ask}>
+                        <Field label="Tu pregunta" name="message" as="textarea" rows={2}
+                          required minLength={2} maxLength={1000} />
+                        <Button type="submit" disabled={shop.busy}>Enviar consulta</Button>
+                        {messageError && <Alert tone="error">{messageError}</Alert>}
+                        {asked && !messageError && <p role="status">Consulta guardada. <a href="#/historial">Ver actividad</a></p>}
+                      </form>
+                    ) : <a href="#/acceso">Inicia sesión para enviar una consulta.</a>}
+                  </div>
+                </details>
+              )}
             </>
           )}
         </div>
       </div>
 
-      <ReviewsSection product={p} shop={shop} />
+      {isDemo && <ReviewsSection product={p} shop={shop} />}
     </div>
   );
 }

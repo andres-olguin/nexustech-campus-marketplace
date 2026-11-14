@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsEmail, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, IsUrl, IsIn, Matches, ValidateIf } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, IsUrl, IsIn, Matches, ValidateIf, ValidateNested, IsObject } from 'class-validator';
+import { profiles } from '../catalog/facet-contract';
+import { TechnicalDto } from '../catalog/technical';
 
 export class PageQuery {
   @ApiPropertyOptional({ default: 1 }) @Type(() => Number) @IsInt() @Min(1) @Max(100000) page = 1;
@@ -11,6 +13,11 @@ export class CatalogQuery extends PageQuery {
   @ApiPropertyOptional() @IsOptional() @IsUUID() categoryId?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(2500000) minPrice?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(2500000) maxPrice?: number;
+  @ApiPropertyOptional({ enum: [...profiles] }) @IsOptional() @IsIn(profiles) profile?: typeof profiles[number];
+  @ApiPropertyOptional({ example: '{"ramGb":"16","ramType":"DDR4"}', description: 'Mapa JSON de filtros técnicos combinables' })
+  @IsOptional() @IsString() @Length(2, 2000) facets?: string;
+  @ApiPropertyOptional({ enum: ['default', 'price-asc', 'price-desc', 'name-asc', 'name-desc'] })
+  @IsOptional() @IsIn(['default', 'price-asc', 'price-desc', 'name-asc', 'name-desc']) sort?: string;
 }
 export class RegisterDto {
   @ApiProperty({ example: 'demo@example.test' }) @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value) @IsEmail() @Length(3, 254) email!: string;
@@ -35,6 +42,9 @@ export class ProductDto {
   @ApiProperty({ minimum: 1000, maximum: 2500000 }) @IsInt() @Min(1000) @Max(2500000) price!: number;
   @ApiProperty({ minimum: 0, maximum: 100000 }) @IsInt() @Min(0) @Max(100000) stock!: number;
   @ApiPropertyOptional() @IsOptional() @IsUrl({ protocols: ['https'], require_protocol: true }) @Length(1, 1000) imageUrl?: string;
+  @ApiPropertyOptional({ type: TechnicalDto, nullable: true })
+  @ValidateIf((_o, v) => v !== null && v !== undefined) @IsObject() @ValidateNested() @Type(() => TechnicalDto)
+  technical?: TechnicalDto | null;
 }
 export class UpdateProductDto extends PartialType(ProductDto, { skipNullProperties: false }) {}
 export class CartDto {

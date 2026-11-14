@@ -21,6 +21,14 @@ const user = (value) =>
   value && uuid(value.id) && string(value.email) && string(value.name);
 const category = (value) =>
   baseRecord(value) && string(value.name) && uuid(value.ownerId);
+const object = (value) => value && typeof value === "object" && !Array.isArray(value);
+const specValue = (value) => string(value) ||
+  typeof value === "number" && Number.isFinite(value) ||
+  Array.isArray(value) && value.every(string);
+const technical = (value) => object(value) && string(value.profile) && string(value.text) &&
+  object(value.values) && Object.values(value.values).every(specValue);
+const facetValue = (value) => object(value) && string(value.key) && integer(value.count) &&
+  (string(value.value) || typeof value.value === "number" && Number.isFinite(value.value));
 const product = (value) =>
   baseRecord(value) &&
   string(value.name) &&
@@ -30,6 +38,7 @@ const product = (value) =>
   integer(value.price) &&
   integer(value.stock) &&
   typeof value.isActive === "boolean" &&
+  (value.technical == null || technical(value.technical)) &&
   (value.imageUrl === null || string(value.imageUrl));
 const item = (value) =>
   baseRecord(value) &&
@@ -312,6 +321,10 @@ export function createApiClient({
           ),
         { signal, schema: schemas.products },
       ),
+    catalogFacets: (query, signal) =>
+      request("/products/facets?" + new URLSearchParams(
+        Object.entries(query).filter(([, value]) => value !== "" && value !== undefined),
+      ), { signal, schema: array(facetValue) }),
     product: (value, signal) =>
       request("/products/" + id(value), { signal, schema: schemas.product }),
     publish: (body) =>

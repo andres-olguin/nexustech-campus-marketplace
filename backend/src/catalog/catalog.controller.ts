@@ -15,6 +15,7 @@ export class CategoriesController {
 export class ProductsController {
   constructor(private readonly catalog: CatalogService) {}
   @Get() list(@Query() q: CatalogQuery) { return this.catalog.list(q); }
+  @Get('facets') options(@Query() q: CatalogQuery) { return this.catalog.facets(q); }
   @Get(':id') get(@Param('id', ParseUUIDPipe) id: string) { return this.catalog.get(id); }
   @Post() @UseGuards(AuthGuard) @ApiBearerAuth() create(@CurrentUser() u: string, @Body() dto: ProductDto) { return this.catalog.create(u, dto); }
   @Patch(':id') @UseGuards(AuthGuard) @ApiBearerAuth() update(@CurrentUser() u: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProductDto) { return this.catalog.update(u, id, dto); }

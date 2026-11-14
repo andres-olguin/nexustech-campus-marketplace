@@ -33,6 +33,7 @@ export class Product extends RecordEntity {
   @Column({ type: 'integer' }) price!: number;
   @Column({ type: 'integer' }) stock!: number;
   @Column({ type: 'text', nullable: true }) imageUrl!: string | null;
+  @Column({ type: 'jsonb', nullable: true }) technical!: import('../catalog/technical').TechnicalDto | null;
   @Column({ default: true }) isActive!: boolean;
   @UpdateDateColumn({ type: 'timestamptz' }) updatedAt!: Date;
 }

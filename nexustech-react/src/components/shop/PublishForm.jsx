@@ -2,6 +2,8 @@ import { useState } from "react";
 import Button from "../ui/Button.jsx";
 import Field from "../ui/Field.jsx";
 import Alert from "../ui/Alert.jsx";
+import { PRODUCT_PROFILES } from "../../data/filterProfiles.js";
+import { describeProduct } from "../../utils/connectedCatalog.js";
 export default function PublishForm({
   initialProduct,
   categories,
@@ -23,6 +25,14 @@ export default function PublishForm({
     };
     if (form.get("imageUrl").trim())
       body.imageUrl = form.get("imageUrl").trim();
+    body.technical = describeProduct({
+      name: body.name,
+      description: body.description,
+      profileId: form.get("productType"),
+      brand: form.get("brand").trim(),
+      series: form.get("series").trim(),
+      text: form.get("technicalText").trim(),
+    });
     try {
       await onSave(body);
     } catch (err) {
@@ -98,6 +108,23 @@ export default function PublishForm({
         defaultValue={p.imageUrl || ""}
         hint="Omitir para usar una imagen representativa. No se admiten archivos adjuntos."
       />
+      <details className="nt-product-specs nt-publish-specs" open={p.technical ? true : undefined}>
+        <summary>Datos para los filtros <span>Opcional</span></summary>
+        <div className="nt-product-specs-body">
+          <Field label="Tipo de producto" name="productType" as="select" defaultValue={p.technical?.profile ?? ""}>
+            <option value="">Detectar por el nombre</option>
+            {PRODUCT_PROFILES.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+          </Field>
+          <div className="nt-form-row">
+            <Field label="Marca" name="brand" maxLength={80} defaultValue={p.technical?.values?.brand ?? ""} />
+            <Field label="Línea o serie" name="series" maxLength={80} defaultValue={p.technical?.values?.series ?? ""} />
+          </div>
+          <Field label="Especificaciones técnicas" name="technicalText" as="textarea" maxLength={1500}
+            defaultValue={p.technical?.text ?? ""} rows={3}
+            placeholder="Ej.: 2×8 GB DDR4 DIMM, 3200 MT/s"
+            hint="Los filtros se generan a partir de los datos declarados. Incluye las unidades." />
+        </div>
+      </details>
       {!categories.length && (
         <Alert>Crea primero una categoría desde Mi cuenta.</Alert>
       )}

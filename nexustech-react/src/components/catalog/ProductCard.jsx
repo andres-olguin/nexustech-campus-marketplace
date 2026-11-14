@@ -2,7 +2,7 @@ import Badge from "../ui/Badge.jsx";
 import Button from "../ui/Button.jsx";
 import Icon from "../ui/Icon.jsx";
 import ProductImage from "../ui/ProductImage.jsx";
-import { formatCLP } from "../../utils/format.js";
+import PriceDisplay from "../ui/PriceDisplay.jsx";
 
 export default function ProductCard({
   product: p,
@@ -12,9 +12,11 @@ export default function ProductCard({
   onDetail,
   onAdd,
   onEdit,
+  onPrice,
   onArchive,
   own,
   busy,
+  usdRate,
 }) {
   const isDemo = Boolean(p.isDemo);
   const detailTarget = isDemo ? p : p.id;
@@ -125,8 +127,11 @@ export default function ProductCard({
         </p>
 
         <div className="nt-product-price">
-          <strong>{formatCLP(p.price)}</strong>
-          <small className="nt-price-currency">CLP</small>
+          <PriceDisplay amount={p.price} usdRate={usdRate} />
+          {own && !isDemo && onPrice && (
+            <Button variant="ghost" icon="edit" className="nt-edit-price"
+              aria-label={"Editar precio de " + p.name} onClick={() => onPrice(p)} disabled={busy}>Editar precio</Button>
+          )}
         </div>
 
         <div className="nt-product-buttons">

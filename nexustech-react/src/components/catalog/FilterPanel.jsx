@@ -5,7 +5,7 @@ import Icon from '../ui/Icon.jsx';
 import { categories, formatCLP, formatNumber } from '../../utils/format.js';
 import { MAX_PRICE } from '../../utils/pricing.js';
 
-function TechnicalFilters({ profile, options, selections, onChange }) {
+export function TechnicalFilters({ profile, options, selections, onChange }) {
   const groups = profile.groups.map((group) => ({
     ...group,
     fields: group.fields.filter(({ key }) => options[key]?.length),
@@ -27,7 +27,7 @@ function TechnicalFilters({ profile, options, selections, onChange }) {
             value={selections[key] || ''} onChange={(event) => onChange(key, event.target.value)}>
             <option value="">Cualquiera</option>
             {options[key].map(({ value, count, label: choiceLabel }) => <option key={value} value={value}
-              disabled={count === 0 && selections[key] !== value}>{choiceLabel} · {formatNumber(count)}</option>)}
+              disabled={count === 0 && selections[key] !== value}>{choiceLabel}{Number.isFinite(count) ? ' · ' + formatNumber(count) : ''}</option>)}
           </Field>)}
         </div>
       </details>;

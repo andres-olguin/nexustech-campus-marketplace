@@ -27,7 +27,8 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
   const pg = new EmbeddedPostgres({ databaseDir: dir, port: pgPort, user: 'postgres', password,
     persistent: true, initdbFlags: ['--locale=C', '--encoding=UTF8'],
     // PostgreSQL 18 io workers may retain inherited pipes after taskkill on Windows.
-    postgresFlags: ['-c', 'io_method=sync'], onLog: () => {}, onError: () => {} });
+    postgresFlags: ['-c', 'io_method=sync', '-c', 'listen_addresses=127.0.0.1', '-c', 'unix_socket_directories='],
+    onLog: () => {}, onError: () => {} });
   let db, app;
   const stopPostgres = async () => {
     const owned = pg.process;
@@ -43,7 +44,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
     await pg.initialise();
     await pg.start();
     await pg.createDatabase('nexustech_test');
-    process.env.DATABASE_URL = `postgresql://postgres:${password}@localhost:${pgPort}/nexustech_test`;
+    process.env.DATABASE_URL = `postgresql://postgres:${password}@127.0.0.1:${pgPort}/nexustech_test`;
     process.env.JWT_SECRET = randomBytes(48).toString('hex');
     if (process.env.MONGODB_TEST_URI) process.env.MONGODB_URI = process.env.MONGODB_TEST_URI;
     require('reflect-metadata');
@@ -55,9 +56,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
       const cli = require.resolve('typeorm/cli.js');
       await exec(process.execPath, [cli, 'migration:run', '-d', 'dist/database/data-source.js']);
       assert.equal((await db.runMigrations()).length, 0);
-      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
-      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
-      await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
+      for (const _ of database.migrations) await exec(process.execPath, [cli, 'migration:revert', '-d', 'dist/database/data-source.js']);
       await exec(process.execPath, ['-r', 'ts-node/register', cli, 'migration:run', '-d', 'src/database/data-source.ts']);
       assert.equal((await db.runMigrations()).length, 0);
     });
@@ -303,6 +302,34 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
         await http.get(base + '/health/ready').expect(200);
       } finally { await client.close(); }
     });
+    let filteredId;
+    await t.test('Technical filters apply before pagination and the price change belongs to the seller', async () => {
+      const seed = (name, price, technical) => http.post(base + '/products').set(auth(seller.accessToken))
+        .send({ categoryId: category.id, name, price, stock: 2, description: 'Component for testing SQL catalog facets', technical });
+      const ram = (ramGb, speed) => ({ profile: 'memory', text: 'Memoria DDR4', values: { ramGb, ramSpeed: speed, ramType: 'DDR4' } });
+      await seed('Test catalog RAM 8 GB', 10000, ram(8, 2666)).expect(201);
+      filteredId = (await seed('Test catalog RAM 16 GB', 24000, ram(16, 3200)).expect(201)).body.id;
+      await seed('Test catalog invalid RAM', 36000, ram('32', 3200)).expect(400);
+      await seed('Test catalog invalid key', 36000, { profile: 'memory', text: '', values: { unknown: 'x' } }).expect(400);
+      const gpu = (await seed('Test catalog GPU 8 GB', 50000, {
+        profile: 'graphics', text: 'RTX, VRAM 8 GB', values: { vramGb: 8, vramType: 'GDDR6', ports: ['HDMI', 'DisplayPort'] },
+      }).expect(201)).body.id;
+      const params = { profile: 'memory', categoryId: category.id, limit: 1, sort: 'price-asc' };
+      const first = (await http.get(base + '/products').query(params).expect(200)).body;
+      assert.deepEqual([first.total, first.items[0].technical.values.ramGb], [2, 8]);
+      const filtered = (await http.get(base + '/products').query({ ...params, facets: '{"ramGb":"16","ramType":"ddr4"}' }).expect(200)).body;
+      assert.deepEqual([filtered.total, filtered.items[0].id], [1, filteredId]);
+      assert.equal((await http.get(base + '/products').query({ profile: 'memory', facets: '{"ramCapacity":"8"}' }).expect(200)).body.total, 1);
+      assert.equal((await http.get(base + '/products').query({ profile: 'graphics', facets: '{"ports":"hdmi"}' }).expect(200)).body.items[0].id, gpu);
+      await http.get(base + '/products').query({ facets: '{"unknown":"16"}' }).expect(400);
+      const options = (await http.get(base + '/products/facets').query({ profile: 'memory', search: 'Test catalog RAM' }).expect(200)).body;
+      assert.deepEqual(options.filter(x => x.key === 'ramGb').map(x => x.value).sort((a, b) => a - b), [8,16]);
+      await http.patch(base + '/products/' + filteredId).set(auth(buyer.accessToken)).send({ price: 16000 }).expect(403);
+      const updated = (await http.patch(base + '/products/' + filteredId).set(auth(seller.accessToken)).send({ price: 16000 }).expect(200)).body;
+      assert.equal(updated.technical.values.ramGb, 16);
+      assert.equal((await http.get(base + '/products/' + filteredId).expect(200)).body.price, 16000);
+      assert.ok(openapi.paths[base + '/products/facets']);
+    });
     await t.test('Data survives PostgreSQL restart and two fresh API processes', async () => {
       const trackedId = (await db.query('SELECT id FROM orders WHERE "idempotencyKey" = $1', ['multi-seller-tracking']))[0].id;
       await app.close(); app = undefined;
@@ -329,6 +356,11 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
           assert.equal(saved.status, 'delivered');
           assert.equal(saved.total, 30000);
           assert.equal(saved.fulfillments.length, 2);
+          if (filteredId) {
+            const persisted = (await live.get(`${base}/products/${filteredId}`).expect(200)).body;
+            assert.equal(persisted.technical.values.ramGb, 16);
+            assert.equal(persisted.price, 16000);
+          }
           for (const item of saved.items) assert.equal((await live.get(`${base}/products/${item.productId}`).expect(200)).body.stock, 2);
           await live.get('/docs').redirects(1).expect(200);
         } catch (error) { console.error('Restart verification failed:', error, diagnostics); throw error; } finally {

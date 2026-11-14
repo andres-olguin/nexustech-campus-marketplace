@@ -62,14 +62,19 @@ async function ready(url, child) {
     port: pgPort,
     persistent: false,
     initdbFlags: ["--locale=C", "--encoding=UTF8"],
-    postgresFlags: ["-c", "io_method=sync"],
+    postgresFlags: ["-c", "io_method=sync", "-c", "listen_addresses=127.0.0.1", "-c", "unix_socket_directories="],
     onLog: () => {},
     onError: () => {},
   });
   let mongo;
   try {
     const { MongoMemoryServer } = require(require.resolve("mongodb-memory-server", { paths: [backend] }));
-    mongo = await MongoMemoryServer.create({ instance: { launchTimeout: 120000, storageEngine: "wiredTiger" } });
+    mongo = await MongoMemoryServer.create({
+      binary: { version: process.env.MONGOMS_VERSION || "7.0.24" },
+      instance: { launchTimeout: 120000, storageEngine: "wiredTiger",
+        args: ["--setParameter", "diagnosticDataCollectionEnabled=false", ...(process.platform === "win32" ? [] : ["--nounixsocket"])],
+      },
+    });
     console.log("[RUNNER] Starting postgres...");
     await pg.initialise();
     await pg.start();
@@ -77,7 +82,7 @@ async function ready(url, child) {
     console.log("[RUNNER] Postgres started, compiling typescript...");
     const env = {
       ...process.env,
-      DATABASE_URL: `postgresql://postgres:${password}@localhost:${pgPort}/nexustech_browser_test`,
+      DATABASE_URL: `postgresql://postgres:${password}@127.0.0.1:${pgPort}/nexustech_browser_test`,
       JWT_SECRET: randomBytes(48).toString("hex"),
       MONGODB_URI: mongo.getUri(),
       MONGODB_DB_NAME: "nexustech_browser_test",
@@ -105,7 +110,7 @@ async function ready(url, child) {
       { cwd: backend, env },
     );
     const api = launch(["dist/main.js"], backend, env, "API");
-    await ready(apiUrl + "/api/v1/health", api);
+    await ready(apiUrl + "/api/v1/health/ready", api);
     const front = launch(
       [
         join(root, "node_modules/vite/bin/vite.js"),
