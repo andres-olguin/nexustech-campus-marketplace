@@ -1,53 +1,145 @@
-import Button from '../ui/Button.jsx';
-import Field from '../ui/Field.jsx';
-import { profileForProduct } from '../../data/filterProfiles.js';
-import useValidatedForm from '../../hooks/useValidatedForm.js';
-import { categories } from '../../utils/format.js';
-import { isValidPrice, MAX_PRICE, MIN_PRICE, PRICE_ERROR } from '../../utils/pricing.js';
-
-function validate(values) {
-  const errors = {};
-  if (values.nombre.trim().length < 3) errors.nombre = 'Ingresa un nombre de al menos 3 caracteres.';
-  if (!isValidPrice(Number(values.precio))) errors.precio = PRICE_ERROR;
-  if (!categories.includes(values.categoria)) errors.categoria = 'Selecciona una categoría válida.';
-  if (values.imagen.trim()) {
-    try { if (new URL(values.imagen.trim()).protocol !== 'https:') throw new Error(); }
-    catch { errors.imagen = 'Usa un enlace de imagen que comience con https://.'; }
+import { useState } from "react";
+import Button from "../ui/Button.jsx";
+import Field from "../ui/Field.jsx";
+import Alert from "../ui/Alert.jsx";
+import { PRODUCT_PROFILES } from "../../data/filterProfiles.js";
+import { describeProduct } from "../../utils/connectedCatalog.js";
+export default function PublishForm({
+  initialProduct,
+  categories,
+  busy,
+  onSave,
+  onCancel,
+}) {
+  const [error, setError] = useState("");
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const body = {
+      name: form.get("name").trim(),
+      description: form.get("description").trim(),
+      categoryId: form.get("categoryId"),
+      price: Number(form.get("price")),
+      stock: Number(form.get("stock")),
+    };
+    if (form.get("imageUrl").trim())
+      body.imageUrl = form.get("imageUrl").trim();
+    body.technical = describeProduct({
+      name: body.name,
+      description: body.description,
+      profileId: form.get("productType"),
+      brand: form.get("brand").trim(),
+      series: form.get("series").trim(),
+      text: form.get("technicalText").trim(),
+    });
+    try {
+      await onSave(body);
+    } catch (err) {
+      setError(err.message);
+    }
   }
-  if (values.descripcion.trim().length < 10) errors.descripcion = 'Describe el equipo con al menos 10 caracteres.';
-  if (values.vendedor.trim().length < 2) errors.vendedor = 'Ingresa el nombre del responsable.';
-  return errors;
-}
-export default function PublishForm({ user, onSave, onCancel }) {
-  const form = useValidatedForm({
-    nombre: '', categoria: 'Hardware', precio: '', imagen: '', descripcion: '', vendedor: user?.nombre || '',
-    marca: '', linea: '', tipo: '', fichaTecnica: '',
-  }, validate, onSave);
-  const props = (name) => ({ name, value: form.values[name], onChange: form.change, error: form.errors[name] });
-  const profile = profileForProduct({ tipo: form.values.tipo, nombre: form.values.nombre });
-  return <form ref={form.ref} onSubmit={form.submit} noValidate>
-    <Field label="Nombre del producto" {...props('nombre')} autoFocus required maxLength={160} placeholder="Ej. Teclado mecánico para programación" />
-    <div className="nt-form-row">
-      <Field label="Precio en CLP" {...props('precio')} type="number" inputMode="numeric" min={MIN_PRICE} max={MAX_PRICE} step="1" required placeholder="65000" />
-      <Field label="Categoría" {...props('categoria')} as="select" required>{categories.map((cat) => <option key={cat}>{cat}</option>)}</Field>
-    </div>
-    <Field label="Enlace de imagen (opcional)" {...props('imagen')} type="url" maxLength={1000} placeholder="https://..." hint="Si lo dejas vacío, se usa una ilustración local." />
-    <Field label="Descripción y estado" {...props('descripcion')} as="textarea" rows={3} required maxLength={2000} placeholder="Describe las especificaciones y el estado del equipo." />
-    <Field label="Responsable de la publicación" {...props('vendedor')} required maxLength={80} />
-    <details className="nt-product-specs nt-publish-specs">
-      <summary>Datos para los filtros <span>Opcional</span></summary>
-      <div className="nt-product-specs-body">
-        <div className="nt-form-row">
-          <Field label="Marca del producto" {...props('marca')} maxLength={80} placeholder="Ej. Lenovo" />
-          <Field label="Línea o serie" {...props('linea')} maxLength={80} placeholder="Ej. ThinkPad" />
-        </div>
-        <Field label="Tipo de producto" {...props('tipo')} maxLength={80} placeholder="Ej. Memoria RAM, tarjeta de video, notebook" />
-        <Field label="Especificaciones técnicas" {...props('fichaTecnica')} as="textarea" rows={3} maxLength={1500}
-          placeholder={'Ej. ' + (profile.example || 'Indica el modelo, la capacidad y las características que correspondan.')}
-          hint={profile.example ? 'Ejemplo para ' + profile.label.toLowerCase() + ': ' + profile.example
-            : 'Indica el tipo y las características que conozcas para que la publicación aparezca en los filtros correspondientes.'} />
+  const p = initialProduct || {};
+  return (
+    <form onSubmit={submit} aria-busy={busy}>
+      {error && <Alert tone="error">{error}</Alert>}
+      <Field
+        label="Nombre del producto"
+        name="name"
+        defaultValue={p.name || ""}
+        required
+        minLength={3}
+        maxLength={160}
+      />
+      <Field
+        label="Descripción"
+        name="description"
+        as="textarea"
+        defaultValue={p.description || ""}
+        required
+        minLength={10}
+        maxLength={2000}
+        rows={3}
+      />
+      <div className="nt-form-row">
+        <Field
+          label="Categoría"
+          name="categoryId"
+          as="select"
+          defaultValue={p.categoryId || ""}
+          required
+        >
+          <option value="" disabled>
+            Selecciona una categoría
+          </option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Field>
+        <Field
+          label="Precio en CLP"
+          name="price"
+          type="number"
+          defaultValue={p.price || ""}
+          required
+          min={1000}
+          max={2500000}
+          step={1}
+        />
       </div>
-    </details>
-    <div className="nt-form-actions"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button type="submit" icon="plus">Publicar producto</Button></div>
-  </form>;
+      <Field
+        label="Stock"
+        name="stock"
+        type="number"
+        defaultValue={p.stock ?? 1}
+        required
+        min={0}
+        max={100000}
+        step={1}
+      />
+      <Field
+        label="Imagen HTTPS (opcional)"
+        name="imageUrl"
+        type="url"
+        pattern="https://.*"
+        maxLength={1000}
+        defaultValue={p.imageUrl || ""}
+        hint="Omitir para usar una imagen representativa. No se admiten archivos adjuntos."
+      />
+      <details className="nt-product-specs nt-publish-specs" open={p.technical ? true : undefined}>
+        <summary>Datos para los filtros <span>Opcional</span></summary>
+        <div className="nt-product-specs-body">
+          <Field label="Tipo de producto" name="productType" as="select" defaultValue={p.technical?.profile ?? ""}>
+            <option value="">Detectar por el nombre</option>
+            {PRODUCT_PROFILES.map(profile => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
+          </Field>
+          <div className="nt-form-row">
+            <Field label="Marca" name="brand" maxLength={80} defaultValue={p.technical?.values?.brand ?? ""} />
+            <Field label="Línea o serie" name="series" maxLength={80} defaultValue={p.technical?.values?.series ?? ""} />
+          </div>
+          <Field label="Especificaciones técnicas" name="technicalText" as="textarea" maxLength={1500}
+            defaultValue={p.technical?.text ?? ""} rows={3}
+            placeholder="Ej.: 2×8 GB DDR4 DIMM, 3200 MT/s"
+            hint="Los filtros se generan a partir de los datos declarados. Incluye las unidades." />
+        </div>
+      </details>
+      {!categories.length && (
+        <Alert>Crea primero una categoría desde Mi cuenta.</Alert>
+      )}
+      <div className="nt-form-actions">
+        <Button variant="secondary" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={busy || !categories.length}>
+          {busy
+            ? "Guardando…"
+            : initialProduct
+              ? "Guardar cambios"
+              : "Publicar producto"}
+        </Button>
+      </div>
+    </form>
+  );
 }

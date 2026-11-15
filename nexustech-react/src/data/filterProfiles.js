@@ -123,6 +123,11 @@ export function profileHint(text, named) {
 
 export function profileForProduct(product) {
   if (!cachedProfiles.has(product)) {
+    const explicit = profileForId(product.perfilTecnico);
+    if (explicit) {
+      cachedProfiles.set(product, explicit);
+      return explicit;
+    }
     const declared = product.tipo ? matchProfile(normalizeSearch(product.tipo)) : null;
     if (declared || product.catalogoDemo) {
       cachedProfiles.set(product, declared?.profile ?? GENERAL_PROFILE);

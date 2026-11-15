@@ -1,21 +1,236 @@
-import { useState } from 'react';
-import Badge from '../components/ui/Badge.jsx';
-import Button from '../components/ui/Button.jsx';
-import Card from '../components/ui/Card.jsx';
-import EmptyState from '../components/ui/EmptyState.jsx';
-import Field from '../components/ui/Field.jsx';
-import Icon from '../components/ui/Icon.jsx';
-import useValidatedForm from '../hooks/useValidatedForm.js';
-import { formatCLP, formatDate } from '../utils/format.js';
-
-const steps = ['Recolectado', 'En centro', 'En tránsito', 'Entregado'];
-export default function TrackingPage({ orders, onAdvance, initialCode = '' }) {
-  const [selectedCode, setSelectedCode] = useState(initialCode.toUpperCase());
-  const form = useValidatedForm({ codigo: initialCode }, (values) => values.codigo.trim() ? {} : { codigo: 'Ingresa un código de seguimiento.' }, (values) => setSelectedCode(values.codigo.trim().toUpperCase()));
-  const selected = orders.find((order) => order.codigo.toUpperCase() === selectedCode);
-  function select(code) { form.setValue('codigo', code); setSelectedCode(code.toUpperCase()); }
-  return <><header className="nt-page-heading"><span className="nt-eyebrow">SIGUE TU PEDIDO</span><h1>Rastreo de envíos<span>.</span></h1><p>Consulta el avance de tus pedidos de demostración.</p></header><div className="nt-tracking-search"><form ref={form.ref} onSubmit={form.submit} noValidate><Field label="Código de seguimiento" name="codigo" value={form.values.codigo} onChange={form.change} error={form.errors.codigo} placeholder="TRK-123456 o 9876543210" required maxLength={30} /><Button type="submit" icon="search">Consultar pedido</Button></form><Button variant="ghost" onClick={() => select('9876543210')}>Probar código 9876543210<Icon name="arrow" size={16} /></Button></div>
-    {selected ? <Card className="nt-tracking-card"><div className="nt-tracking-title"><div><span className="nt-eyebrow">GUÍA DE SEGUIMIENTO</span><h2>{selected.codigo}</h2></div><Badge tone={selected.paso === 3 ? 'success' : 'cyan'}>{steps[selected.paso]}</Badge></div><ol className="nt-timeline">{steps.map((step, index) => <li key={step} className={index < selected.paso ? 'is-done' : index === selected.paso ? 'is-current' : ''} aria-current={index === selected.paso ? 'step' : undefined}><span className="nt-step-circle">{index < selected.paso ? <Icon name="check" size={20} /> : index === selected.paso ? <Icon name={index === 3 ? 'check' : 'truck'} size={20} /> : index + 1}</span><strong>{step}</strong><small>{index < selected.paso ? 'Completado' : index === selected.paso ? 'Estado actual' : 'Pendiente'}</small></li>)}</ol><dl className="nt-order-summary"><div><dt>Origen</dt><dd>{selected.origen}</dd></div><div><dt>Destino</dt><dd>{selected.ciudad}</dd></div><div><dt>Fecha del pedido</dt><dd>{formatDate(selected.fecha)}</dd></div><div><dt>Total</dt><dd>{formatCLP(selected.total)}</dd></div></dl><ul className="nt-order-items">{selected.items.map((item, index) => <li key={item.id + '-' + index}><span>{item.cantidad} × {item.nombre}</span><strong>{formatCLP(item.precio * item.cantidad)}</strong></li>)}</ul><div className="nt-tracking-actions"><p>Estados simulados para la demostración del taller.</p><Button variant="secondary" icon="truck" disabled={selected.paso === 3} onClick={() => onAdvance(selected.codigo)}>Avanzar estado de demostración</Button></div></Card> : selectedCode ? <EmptyState title="No encontramos ese pedido" description="Revisa el código o elige un pedido guardado en este navegador." icon="package" /> : <EmptyState title="Tu pedido, paso a paso" description="Ingresa un código o prueba la guía de ejemplo para ver la línea de tiempo." icon="truck" />}
-    {orders.length > 0 && <section className="nt-recent-orders" aria-labelledby="pedidos-recientes"><h2 id="pedidos-recientes">Pedidos guardados</h2><div>{orders.slice(0, 6).map((order) => <button key={order.codigo} onClick={() => select(order.codigo)}><Icon name="package" /><span><strong>{order.codigo}</strong><small>{order.ciudad} · {steps[order.paso]}</small></span><Icon name="chevron" size={17} /></button>)}</div></section>}
-  </>;
+import { useState } from "react";
+import { useRemote } from "../hooks/useShop.js";
+import Alert from "../components/ui/Alert.jsx";
+import Button from "../components/ui/Button.jsx";
+import Field from "../components/ui/Field.jsx";
+import Pagination from "../components/catalog/Pagination.jsx";
+import { formatCLP } from "../utils/format.js";
+export const statusLabels = {
+  confirmed: "Confirmado",
+  preparing: "En preparación",
+  shipped: "Despacho declarado",
+  delivered: "Entrega declarada",
+  cancelled: "Cancelado",
+};
+const nextStatus = {
+  confirmed: "preparing",
+  preparing: "shipped",
+  shipped: "delivered",
+};
+export default function TrackingPage({ shop }) {
+  const [seller, setSeller] = useState(false);
+  const [page, setPage] = useState(1);
+  const [detail, setDetail] = useState(null);
+  const [error, setError] = useState("");
+  const [searching, setSearching] = useState(false);
+  const result = useRemote(
+    (signal) => (shop.session ? shop.api.orders(page, seller, signal) : null),
+    [shop.api, shop.session, shop.revision, seller, page],
+  );
+  async function lookup(event) {
+    event.preventDefault();
+    setError("");
+    setDetail(null);
+    setSearching(true);
+    try {
+      setDetail(
+        await shop.api.order(
+          new FormData(event.currentTarget).get("orderId").trim(),
+        ),
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  }
+  function mutate(action) {
+    setDetail(null);
+    shop.act(() => shop.run(action, "Estado actualizado en el servidor."));
+  }
+  const visible = detail && !seller ? [detail] : result.data?.items || [];
+  return (
+    <section>
+      <header className="nt-page-heading">
+        <span className="nt-eyebrow">SEGUIMIENTO DE TU CUENTA</span>
+        <h1>
+          Pedidos y ventas<span>.</span>
+        </h1>
+        <p>
+          Estados declarados por cada vendedor. Seguimiento SIMULADO, sin
+          transporte ni cobros reales.
+        </p>
+      </header>
+      {!shop.user ? (
+        <Alert>
+          <a href="#/acceso">Inicia sesión</a> para consultar tus pedidos.
+        </Alert>
+      ) : (
+        <>
+          <div className="nt-form-actions">
+            <Button
+              variant={!seller ? "primary" : "secondary"}
+              onClick={() => {
+                setSeller(false);
+                setPage(1);
+                setDetail(null);
+              }}
+            >
+              Mis compras
+            </Button>
+            <Button
+              variant={seller ? "primary" : "secondary"}
+              onClick={() => {
+                setSeller(true);
+                setPage(1);
+                setDetail(null);
+              }}
+            >
+              Mis ventas
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDetail(null);
+                shop.refresh();
+              }}
+            >
+              Actualizar pedidos
+            </Button>
+          </div>
+          {!seller && (
+            <form className="nt-order-lookup" onSubmit={lookup}>
+              <Field
+                label="UUID de un pedido propio"
+                name="orderId"
+                required
+                placeholder="UUID completo del pedido"
+              />
+              <Button type="submit" disabled={searching}>
+                {searching ? "Consultando…" : "Consultar pedido"}
+              </Button>
+            </form>
+          )}
+          {error && <Alert tone="error">{error}</Alert>}
+          {result.status === "loading" ? (
+            <p role="status">Cargando pedidos…</p>
+          ) : result.error ? (
+            <Alert tone="error">
+              {result.error.message}
+              <Button onClick={shop.refresh}>Reintentar</Button>
+            </Alert>
+          ) : !visible.length ? (
+            <p>No hay pedidos para esta vista.</p>
+          ) : (
+            <div className="nt-orders-list">
+              {visible.map((o) => {
+                const status = seller ? o.fulfillment.status : o.status;
+                return (
+                  <article key={o.id} className="nt-order-card">
+                    <div className="nt-order-header">
+                      <h2>
+                        Pedido <span className="nt-id">{o.id}</span>
+                      </h2>
+                      <strong>{statusLabels[status]} · SIMULADO</strong>
+                    </div>
+                    <p>
+                      {new Date(o.createdAt).toLocaleString("es-CL")} ·{" "}
+                      {o.shippingAddress}
+                    </p>
+                    <ul>
+                      {o.items.map((i) => (
+                        <li key={i.id}>
+                          {i.name} × {i.quantity} —{" "}
+                          {formatCLP(i.unitPrice * i.quantity)}
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      {seller ? "Subtotal de tus productos" : "Total"}:{" "}
+                      <strong>
+                        {formatCLP(seller ? o.subtotal : o.total)}
+                      </strong>
+                    </p>
+                    {!seller && (
+                      <>
+                        <h3>Avance por vendedor</h3>
+                        <ul>
+                          {o.fulfillments.map((f) => (
+                            <li key={f.id}>
+                              <span className="nt-id">
+                                Vendedor {f.sellerId}
+                              </span>
+                              : <strong>{statusLabels[f.status]}</strong>
+                            </li>
+                          ))}
+                        </ul>
+                        <p>
+                          Transacción SIMULADA:{" "}
+                          {o.transactions
+                            .map((t) =>
+                              t.status === "reversed"
+                                ? "revertida"
+                                : "aprobada",
+                            )
+                            .join(", ")}
+                          . Sin validez financiera.
+                        </p>
+                        <Button
+                          variant="danger"
+                          disabled={
+                            shop.busy ||
+                            !o.fulfillments.length ||
+                            !o.fulfillments.every(
+                              (f) => f.status === "confirmed",
+                            )
+                          }
+                          onClick={() => mutate(() => shop.api.cancel(o.id))}
+                        >
+                          Cancelar pedido
+                        </Button>
+                        <small>
+                          Solo antes de que cualquier vendedor inicie
+                          preparación.
+                        </small>
+                      </>
+                    )}
+                    {seller && (
+                      <>
+                        <p>
+                          Estado global del pedido:{" "}
+                          {statusLabels[o.orderStatus]}
+                        </p>
+                        <Button
+                          disabled={shop.busy || !nextStatus[status]}
+                          onClick={() =>
+                            mutate(() =>
+                              shop.api.advance(o.id, nextStatus[status]),
+                            )
+                          }
+                        >
+                          {nextStatus[status]
+                            ? "Marcar: " + statusLabels[nextStatus[status]]
+                            : "Sin transición disponible"}
+                        </Button>
+                      </>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+          {!detail && result.data && (
+            <Pagination
+              page={page}
+              totalPages={Math.max(
+                1,
+                Math.ceil(result.data.total / result.data.limit),
+              )}
+              onChange={setPage}
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
 }

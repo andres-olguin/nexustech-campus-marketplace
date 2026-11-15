@@ -19,7 +19,6 @@ const paths = {
   info: 'M12 11v6m0-10h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z',
   alert: 'm12 3 10 18H2L12 3zm0 6v5m0 3h.01',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
-  edit: 'm4 16-1 5 5-1L20 8l-4-4L4 16zm10-10 4 4',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   star: 'm12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2L12 17.3l-5.7 2.9 1.1-6.2L3 9.6l6.2-.9L12 3z',
   shield: 'm12 3 9 4v5c0 5-9 9-9 9s-9-4-9-9V7l9-4zm-5 9 3 3 7-7',
@@ -31,6 +30,7 @@ const paths = {
   logout: 'M9 3H3v18h6m5-16 7 7-7 7M7 12h14',
   clock: 'M12 7v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z',
   grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
+  edit: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'
 };
 export default function Icon({ name, size = 20, filled = false, className = '' }) {
   return <svg className={'nt-icon ' + className} width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.cpu} /></svg>;

@@ -1,0 +1,228 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createApiClient, schemas } from "../src/services/nestApi.js";
+const fixture = JSON.parse(
+  await readFile(
+    new URL("../../backend/docs/HTTP_EXAMPLES.json", import.meta.url),
+  ),
+);
+const sample = (name) =>
+  fixture.examples.find((e) => e.path === "/api/v1/" + name && e.status === 201)
+    .response;
+const json = (value, status = 200, headers) =>
+  new Response(JSON.stringify(value), { status, headers });
+test("Captured Nest product and order validate; Express envelopes and malformed data do not", () => {
+  assert.ok(schemas.product(sample("products")));
+  assert.ok(schemas.order(sample("orders")));
+  assert.equal(
+    schemas.products({ data: [sample("products")], meta: { total: 1 } }),
+    false,
+  );
+  assert.equal(
+    schemas.product({ ...sample("products"), id: "prod-001" }),
+    false,
+  );
+  assert.equal(
+    schemas.order({
+      ...sample("orders"),
+      transactions: [{ provider: "bank" }],
+    }),
+    false,
+  );
+});
+test("Checkout sends only allowed fields, Bearer header and never x-user-id", async () => {
+  let sent;
+  const api = createApiClient({
+    fetchImpl: async (url, options) => {
+      sent = { url, ...options };
+      return json(sample("orders"), 201);
+    },
+  });
+  api.setToken("signed.jwt.token");
+  await api.checkout({
+    shippingAddress: "Retiro sintético",
+    idempotencyKey: "attempt-001",
+    items: ["forged"],
+    total: 1,
+    userId: "forged",
+  });
+  assert.deepEqual(JSON.parse(sent.body), {
+    shippingAddress: "Retiro sintético",
+    idempotencyKey: "attempt-001",
+  });
+  assert.equal(sent.headers.Authorization, "Bearer signed.jwt.token");
+  assert.equal("x-user-id" in sent.headers, false);
+});
+for (const status of [400, 401, 403, 404, 409, 429, 500, 503]) {
+  test(`HTTP ${status} produces a typed error and does not confirm success`, async () => {
+    let expired = 0;
+    const api = createApiClient({
+      onUnauthorized: () => expired++,
+      fetchImpl: async () =>
+        json({ message: ["Synthetic validation"] }, status, {
+          "Retry-After": "2",
+        }),
+    });
+    api.setToken("signed.jwt.token");
+    await assert.rejects(
+      api.profile(),
+      (e) => e.status === status && e.message.includes("Synthetic validation"),
+    );
+    assert.equal(expired, status === 401 ? 1 : 0);
+    if (status === 429)
+      await assert.rejects(
+        api.profile(),
+        (e) => e.status === 429 && e.retryAfter > 0,
+      );
+  });
+}
+test("Network failure, malformed successful responses and invalid UUID never become success", async () => {
+  const offline = createApiClient({
+    fetchImpl: async () => {
+      throw new TypeError("offline");
+    },
+  });
+  await assert.rejects(offline.categories(), /No se pudo conectar/);
+  const malformed = createApiClient({
+    fetchImpl: async () => json({ connected: true }),
+  });
+  await assert.rejects(malformed.categories(), /incompatible/);
+  assert.throws(
+    () => malformed.product("prod-001"),
+    (e) => e.status === 400,
+  );
+});
+test("External abort remains AbortError instead of showing service failure", async () => {
+  const api = createApiClient({
+    fetchImpl: async () => {
+      throw new DOMException("aborted", "AbortError");
+    },
+  });
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    api.categories(controller.signal),
+    (e) => e.name === "AbortError",
+  );
+});
+
+test("Activity contract validates real Mongo documents and sends Bearer credentials", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const doc = { _id: "a".repeat(24), targetId: id, targetType: "product", senderId: id, receiverId: id, message: "Consulta", createdAt: new Date().toISOString() };
+  let sent;
+  const api = createApiClient({ fetchImpl: async (url, options) => {
+    sent = { url, ...options };
+    return json(options.method === "POST" ? doc : [doc], options.method === "POST" ? 201 : 200);
+  } });
+  api.setToken("signed.jwt.token");
+  assert.deepEqual(await api.targetInteractions(id), [doc]);
+  assert.equal(sent.headers.Authorization, "Bearer signed.jwt.token");
+  assert.deepEqual(await api.createInteraction(doc), doc);
+  assert.equal(JSON.parse(sent.body).receiverId, id);
+  assert.equal(schemas.interactions([{ ...doc, _id: undefined }]), false);
+  const malformed = createApiClient({ fetchImpl: async () => json({ success: true }) });
+  malformed.setToken("signed.jwt.token");
+  await assert.rejects(malformed.myInteractions(), /incompatible/);
+});
+
+test("Reviews endpoint validates product UUID, Bearer header and schema", async () => {
+  const validId = "11111111-1111-4111-8111-111111111111";
+  const userId = "22222222-2222-4222-8222-222222222222";
+  const reviewId = "33333333-3333-4333-8333-333333333333";
+  let lastRequest;
+  const api = createApiClient({
+    fetchImpl: async (url, options) => {
+      lastRequest = { url, ...options };
+      if (options.method === "POST") {
+        return json(
+          {
+            id: reviewId,
+            productId: validId,
+            userId,
+            rating: 5,
+            title: "Buen equipo",
+            comment: "Rendimiento sólido en laboratorio.",
+            featuresEvaluated: ["Rendimiento"],
+            createdAt: "2026-11-10T01:00:00.000Z",
+          },
+          201,
+        );
+      }
+      return json({
+        items: [
+          {
+            id: reviewId,
+            productId: validId,
+            userId,
+            rating: 5,
+            title: "Buen equipo",
+            comment: "Rendimiento sólido en laboratorio.",
+            createdAt: "2026-11-10T01:00:00.000Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 5,
+      });
+    },
+  });
+  assert.throws(
+    () => api.reviews("invalid-id"),
+    (e) => e.status === 400,
+  );
+  const page = await api.reviews(validId, 1);
+  assert.equal(page.items.length, 1);
+  api.setToken("signed.jwt.token");
+  const created = await api.createReview(validId, {
+    rating: 5,
+    title: "Buen equipo",
+    comment: "Rendimiento sólido en laboratorio.",
+    featuresEvaluated: ["Rendimiento"],
+  });
+  assert.equal(created.rating, 5);
+  assert.equal(lastRequest.headers.Authorization, "Bearer signed.jwt.token");
+});
+
+import { part1Products } from "../src/data/catalogPart1.js";
+import { part2Products } from "../src/data/catalogPart2.js";
+import { part3Products } from "../src/data/catalogPart3.js";
+
+test("Curated demo catalog contains exactly 240 distinct, valid products across 12 categories", () => {
+  const all = [...part1Products, ...part2Products, ...part3Products];
+  assert.equal(all.length, 240);
+  const ids = new Set(all.map((p) => p.id));
+  assert.equal(ids.size, 240);
+  const categories = new Set(all.map((p) => p.category));
+  assert.equal(categories.size, 12);
+  for (const item of all) {
+    assert.ok(typeof item.name === "string" && item.name.length >= 5);
+    assert.ok(typeof item.subcategory === "string" && item.subcategory.length > 0);
+    assert.ok(["Nuevo", "Usado"].includes(item.condition));
+    assert.ok(Number.isSafeInteger(item.price) && item.price > 0);
+    assert.ok(Number.isSafeInteger(item.stock) && item.stock >= 0);
+    assert.ok(Array.isArray(item.specs) && item.specs.length >= 3);
+    assert.ok(typeof item.imgKey === "string" && item.imgKey.length > 0);
+    for (const rev of item.reviews || []) {
+      assert.equal(rev.isDemo, true);
+      assert.ok(rev.rating >= 1 && rev.rating <= 5);
+    }
+  }
+});
+
+test("Demo product IDs can never be added to real cart or favorites", () => {
+  const api = createApiClient({
+    fetchImpl: async () => {
+      throw new Error("Should never reach fetch for demo ID");
+    },
+  });
+  api.setToken("signed.jwt.token");
+  assert.throws(
+    () => api.setQuantity("demo-001", 1),
+    (e) => e.status === 400,
+  );
+  assert.throws(
+    () => api.favorite("demo-001", false),
+    (e) => e.status === 400,
+  );
+});

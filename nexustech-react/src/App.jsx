@@ -1,127 +1,316 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Navbar from './components/layout/Navbar.jsx';
-import Footer from './components/layout/Footer.jsx';
-import Alert from './components/ui/Alert.jsx';
-import Button from './components/ui/Button.jsx';
-import Dialog from './components/ui/Dialog.jsx';
-import Icon from './components/ui/Icon.jsx';
-import CartPanel from './components/shop/CartPanel.jsx';
-import CheckoutForm from './components/shop/CheckoutForm.jsx';
-import ProductDetail from './components/shop/ProductDetail.jsx';
-import DetailNavigation from './components/shop/DetailNavigation.jsx';
-import PublishForm from './components/shop/PublishForm.jsx';
-import EditPriceForm from './components/shop/EditPriceForm.jsx';
-import CatalogPage from './pages/CatalogPage.jsx';
-import ContactPage from './pages/ContactPage.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import TrackingPage from './pages/TrackingPage.jsx';
-import useHashRoute from './hooks/useHashRoute.js';
-import useShop from './hooks/useShop.js';
-import useExchangeRate from './hooks/useExchangeRate.js';
-
+import { useEffect, useRef, useState } from "react";
+import Navbar from "./components/layout/Navbar.jsx";
+import Footer from "./components/layout/Footer.jsx";
+import Alert from "./components/ui/Alert.jsx";
+import Button from "./components/ui/Button.jsx";
+import Dialog from "./components/ui/Dialog.jsx";
+import CartPanel from "./components/shop/CartPanel.jsx";
+import CheckoutForm from "./components/shop/CheckoutForm.jsx";
+import ProductDetail from "./components/shop/ProductDetail.jsx";
+import PublishForm from "./components/shop/PublishForm.jsx";
+import EditPriceForm from "./components/shop/EditPriceForm.jsx";
+import DetailNavigation from "./components/shop/DetailNavigation.jsx";
+import CatalogPage from "./pages/CatalogPage.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import TrackingPage from "./pages/TrackingPage.jsx";
+import InteractionsPage from "./pages/InteractionsPage.jsx";
+import useHashRoute from "./hooks/useHashRoute.js";
+import useShop from "./hooks/useShop.js";
+import useExchangeRate from "./hooks/useExchangeRate.js";
+import { formatCLP } from "./utils/format.js";
 export default function App() {
   const shop = useShop();
-  const exchange = useExchangeRate();
-  const { route, section } = useHashRoute();
-  const routeKey = route + ':' + (section?.id ?? '');
-  const [window, setWindow] = useState(null);
-  const [showUSD, setShowUSD] = useState(false);
-  const [catalogVersion, setCatalogVersion] = useState(0);
-  const [trackingCode, setTrackingCode] = useState('');
+  const route = useHashRoute();
   const main = useRef(null);
-  const previousRoute = useRef(routeKey);
+  const previous = useRef(route);
+  const [dialog, setDialog] = useState(null);
+  const [dialogError, setDialogError] = useState("");
+  const [moving, setMoving] = useState(false);
+  const detailRequest = useRef(null);
+  const exchange = useExchangeRate();
+  const [showUSD, setShowUSD] = useState(false);
+  const usdRate = showUSD ? exchange.rate?.value : null;
+  function cancelMove() {
+    detailRequest.current?.abort();
+    detailRequest.current = null;
+    setMoving(false);
+  }
+  function open(value) {
+    cancelMove();
+    setDialogError("");
+    setDialog(value);
+  }
+  function close() {
+    if (!shop.busy) {
+      cancelMove();
+      setDialog(null);
+    }
+  }
+  function protectedOpen(value) {
+    if (!shop.user) {
+      location.hash = "/acceso";
+      return;
+    }
+    open(value);
+  }
   useEffect(() => {
-    if (previousRoute.current !== routeKey) {
+    if (previous.current !== route) {
+      cancelMove();
+      setDialog(null);
       main.current?.focus({ preventScroll: true });
       globalThis.scrollTo({ top: 0 });
-      previousRoute.current = routeKey;
+      previous.current = route;
     }
-    const titles = { catalogo: 'Catálogo', favoritos: 'Favoritos', rastreo: 'Rastreo', contacto: 'Contacto', acceso: 'Acceso' };
-    document.title = (section?.label || titles[route]) + ' · NexusTech Campus Hub';
-  }, [routeKey, route, section]);
-
-  const usdRate = showUSD ? exchange.rate?.value : null;
-  const close = () => setWindow(null);
-  const openCart = () => setWindow({ type: 'cart' });
-  const openPublish = useCallback(() => setWindow({ type: 'publish' }), []);
-  const openDetail = useCallback((product, orderedProducts) => {
-    const index = orderedProducts?.findIndex(({ id }) => id === product.id) ?? -1;
-    setWindow({ type: 'detail', products: index < 0 ? [product] : orderedProducts, index: Math.max(0, index) });
-  }, []);
-  const openDelete = useCallback((product) => setWindow({ type: 'delete', product }), []);
-  const openPrice = useCallback((product) => setWindow({ type: 'price', product }), []);
-  const detail = window?.type === 'detail' ? window : null;
-  const detailProduct = detail ? detail.products[detail.index] : null;
-  function moveDetail(direction) {
-    setWindow((current) => {
-      if (current?.type !== 'detail') return current;
-      const index = current.index + direction;
-      return index >= 0 && index < current.products.length ? { ...current, index } : current;
-    });
+    document.title =
+      ({
+        catalogo: "Catálogo",
+        favoritos: "Favoritos",
+        acceso: "Mi cuenta",
+        rastreo: "Pedidos y ventas",
+        historial: "Actividad",
+        contacto: "Contacto",
+      }[route] || "Catálogo") + " · NexusTech";
+  }, [route]);
+  useEffect(() => {
+    if (!shop.session) {
+      cancelMove();
+      setDialog(null);
+    }
+  }, [shop.session]);
+  function detail(product, navigation) {
+    open({ type: "detail", product, navigation });
   }
-  function navigateWithKeys(event) {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('input, select, textarea, [contenteditable]')) return;
-    const direction = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
-    if (!direction) return;
-    event.preventDefault();
-    moveDetail(direction);
+  async function moveDetail(direction) {
+    const nav = dialog?.navigation;
+    if (!nav || detailRequest.current || shop.busy) return;
+    const index = nav.index + direction;
+    if (index < 0 || index >= nav.count) return;
+    const page = Math.floor(index / nav.limit) + 1;
+    const request = new AbortController();
+    detailRequest.current = request;
+    setDialogError("");
+    setMoving(true);
+    try {
+      const items = page === nav.page ? nav.items : await nav.loadPage(page, request.signal);
+      if (request.signal.aborted) return;
+      const product = items[index % nav.limit];
+      if (!product) throw new Error("Los resultados cambiaron. Cierra el detalle y actualiza el catálogo.");
+      setDialog(current => current?.navigation === nav
+        ? { ...current, product, navigation: { ...nav, index, page, items } }
+        : current);
+    } catch (error) {
+      if (!request.signal.aborted) setDialogError(error.message);
+    } finally {
+      if (detailRequest.current === request) {
+        detailRequest.current = null;
+        setMoving(false);
+      }
+    }
   }
-  function publish(values) {
-    shop.publish(values);
-    setCatalogVersion((current) => current + 1);
-    close();
-    location.hash = '/catalogo';
+  async function savePrice(price) {
+    await shop.run(() => shop.api.edit(dialog.product.id, { price }), "Precio actualizado en el servidor.");
+    setDialog(null);
   }
-  function addFromDetail(id, quantity, finish) {
-    shop.addToCart(id, quantity, finish);
-    openCart();
+  async function publish(body) {
+    await shop.run(
+      () =>
+        dialog.type === "edit"
+          ? shop.api.edit(dialog.product.id, body)
+          : shop.api.publish(body),
+      "Publicación guardada en PostgreSQL.",
+    );
+    setDialog(null);
   }
-  function buyFromDetail(id, quantity, finish) {
-    shop.addToCart(id, quantity, finish);
-    setWindow({ type: 'checkout' });
+  async function checkout(address) {
+    const order = await shop.checkout(address);
+    open({ type: "confirmed", order });
   }
-  function confirmOrder(values) {
-    const order = shop.checkout(values);
-    if (order) setWindow({ type: 'confirmed', order });
+  async function archive() {
+    try {
+      await shop.run(
+        () => shop.api.archive(dialog.product.id),
+        "Publicación archivada. Los pedidos conservan su historial.",
+      );
+      setDialog(null);
+    } catch (error) {
+      setDialogError(error.message);
+    }
   }
-  const title = !window ? '' : detailProduct ? detailProduct.nombre : ({
-    cart: 'Tu carrito', publish: 'Publicar producto', checkout: 'Despacho y pedido simulado',
-    confirmed: 'Pedido confirmado', delete: 'Eliminar publicación', reset: 'Restaurar demostración', price: 'Editar precio',
-  })[window.type];
-  const descriptions = {
-    cart: 'Revisa tus productos, cantidades y acabados.', publish: 'Comparte un equipo o solución con tu comunidad.',
-    checkout: 'Compra de demostración, sin cobro real.', confirmed: 'Tu orden local ya tiene un código de seguimiento.',
-    price: 'Actualiza el precio de tu publicación en pesos chilenos.',
-    delete: 'Puedes deshacer esta acción desde el mensaje de confirmación.', reset: 'Se restablecerán el catálogo, el carrito, los favoritos, la sesión y los pedidos de esta demostración.',
+  const titles = {
+    cart: "Tu carrito",
+    checkout: "Confirmar pedido simulado",
+    publish: "Publicar producto",
+    edit: "Editar producto",
+    price: "Editar precio",
+    archive: "Archivar publicación",
+    detail: dialog?.product?.name,
+    confirmed: "Pedido registrado · SIMULADO",
   };
-
-  function resetCatalogView() {
-    setCatalogVersion((current) => current + 1);
-    main.current?.focus({ preventScroll: true });
-    globalThis.scrollTo({ top: 0 });
-  }
-
-  return <div className="nt-app"><a className="nt-skip" href="#contenido" onClick={(event) => { event.preventDefault(); main.current?.focus(); main.current?.scrollIntoView({ block: 'start' }); }}>Ir al contenido</a><Navbar key={routeKey} route={route} section={section} cartCount={shop.cartCount} favoriteCount={shop.favoriteSet.size} user={shop.user} onCart={openCart} onPublish={openPublish} onCatalogReselect={resetCatalogView} /><main ref={main} className="nt-main" id="contenido" tabIndex={-1}>
-    {shop.storage === 'session' && <Alert title="Cambios durante esta sesión">El navegador no permite conservar la demostración al recargar.</Alert>}
-    {(route === 'catalogo' || route === 'favoritos') && <CatalogPage key={routeKey + ':' + catalogVersion} shop={shop} section={section} favoriteOnly={route === 'favoritos'} onDetail={openDetail} onDelete={openDelete} onEditPrice={openPrice} onPublish={openPublish} exchange={exchange} showUSD={showUSD} onCurrency={setShowUSD} />}
-    {route === 'rastreo' && <TrackingPage key={trackingCode} orders={shop.orders} onAdvance={shop.advanceOrder} initialCode={trackingCode} />}
-    {route === 'contacto' && <ContactPage onSave={shop.saveContact} contacts={shop.contacts} />}
-    {route === 'acceso' && <LoginPage user={shop.user} onLogin={shop.login} onLogout={shop.logout} />}
-    <Footer storage={shop.storage} onReset={() => setWindow({ type: 'reset' })} />
-  </main>
-    {shop.notice && <div className="nt-notice-area"><Alert tone="success" title={shop.notice.title} onDismiss={shop.dismissNotice} action={shop.notice.undo ? <Button variant="secondary" icon="undo" onClick={shop.undoDelete}>Deshacer</Button> : null}>{shop.notice.message}</Alert></div>}
-    <Dialog open={Boolean(window)} title={title} description={detail ? 'Detalles, opciones y reseñas de ejemplo.' : descriptions[window?.type]}
-      onClose={close} wide={Boolean(detail)} drawer={window?.type === 'cart'} viewKey={detailProduct?.id}
-      onKeyDown={detail ? navigateWithKeys : undefined}
-      navigation={detail && <DetailNavigation index={detail.index} count={detail.products.length} onMove={moveDetail} />}>
-      {window?.type === 'cart' && <CartPanel shop={shop} onCheckout={() => setWindow({ type: 'checkout' })} onClose={close} usdRate={usdRate} />}
-      {detailProduct && <ProductDetail key={detailProduct.id} product={detailProduct} usdRate={usdRate} onAdd={addFromDetail} onBuy={buyFromDetail} />}
-      {window?.type === 'publish' && <PublishForm user={shop.user} onSave={publish} onCancel={close} />}
-      {window?.type === 'price' && <EditPriceForm key={window.product.id} product={window.product} usdRate={usdRate} onCancel={close} onSave={(price) => { if (shop.updatePrice(window.product.id, price)) close(); }} />}
-      {window?.type === 'checkout' && <CheckoutForm total={shop.total} user={shop.user} onConfirm={confirmOrder} onCancel={openCart} />}
-      {window?.type === 'confirmed' && <div className="nt-order-confirmation"><span className="nt-success-symbol"><Icon name="check" size={32} /></span><p>Código de seguimiento</p><strong>{window.order.codigo}</strong><p>El pedido quedó guardado para consultar su avance.</p><a className="btn nt-button nt-button--primary" href="#/rastreo" onClick={() => { setTrackingCode(window.order.codigo); close(); }}>Ver seguimiento<Icon name="arrow" size={18} /></a><Button variant="ghost" onClick={close}>Seguir explorando</Button></div>}
-      {window?.type === 'delete' && <><p className="nt-confirm-product">{window.product.nombre}</p><div className="nt-form-actions"><Button variant="secondary" onClick={close}>Cancelar</Button><Button variant="danger" icon="trash" onClick={() => { shop.deleteProduct(window.product.id); close(); }}>Eliminar publicación</Button></div></>}
-      {window?.type === 'reset' && <div className="nt-form-actions"><Button variant="secondary" onClick={close}>Cancelar</Button><Button onClick={() => { shop.resetDemo(); setCatalogVersion((n) => n + 1); setTrackingCode(''); close(); location.hash = '/catalogo'; }}>Restaurar datos de ejemplo</Button></div>}
-    </Dialog>
-  </div>;
+  return (
+    <div className="nt-app">
+      <a
+        className="nt-skip"
+        href="#contenido"
+        onClick={(e) => {
+          e.preventDefault();
+          main.current?.focus();
+        }}
+      >
+        Ir al contenido
+      </a>
+      <Navbar
+        route={route}
+        user={shop.user}
+        cartCount={
+          shop.cart?.items.reduce((sum, i) => sum + i.quantity, 0) || 0
+        }
+        favoriteCount={shop.favoriteSet.size}
+        onCart={() =>
+          protectedOpen({ type: shop.attempt ? "checkout" : "cart" })
+        }
+        onPublish={() => protectedOpen({ type: "publish" })}
+      />
+      <main ref={main} id="contenido" tabIndex={-1} className="nt-main">
+        {shop.notice && (
+          <Alert tone={shop.notice.tone} onDismiss={shop.dismissNotice}>
+            {shop.notice.message}
+          </Alert>
+        )}
+        {shop.session && shop.account.error && route !== "acceso" && (
+          <Alert
+            tone="error"
+            title="No se pudieron actualizar los datos de tu cuenta"
+          >
+            {shop.account.error.message}
+            <Button onClick={shop.refresh}>Reintentar</Button>
+          </Alert>
+        )}
+        {(route === "catalogo" || route === "favoritos") && (
+          <CatalogPage
+            key={route}
+            shop={shop}
+            favoriteOnly={route === "favoritos"}
+            onDetail={detail}
+            onEdit={(product) => open({ type: "edit", product })}
+            onPrice={(product) => open({ type: "price", product })}
+            onArchive={(product) => open({ type: "archive", product })}
+            onPublish={() => protectedOpen({ type: "publish" })}
+            exchange={exchange}
+            showUSD={showUSD}
+            onCurrency={setShowUSD}
+            usdRate={usdRate}
+          />
+        )}
+        {route === "acceso" && (
+          <LoginPage shop={shop} onPublish={() => open({ type: "publish" })} />
+        )}
+        {route === "rastreo" && <TrackingPage shop={shop} />}
+        {route === "historial" && <InteractionsPage shop={shop} />}
+        {route === "contacto" && (
+          <Alert title="Contacto no disponible">
+            No existe un servicio de mensajes en la API actual. No se enviarán
+            ni guardarán consultas ficticias.
+          </Alert>
+        )}
+        <Footer />
+      </main>
+      <Dialog
+        open={Boolean(dialog)}
+        title={titles[dialog?.type] || ""}
+        onClose={close}
+        wide={dialog?.type === "detail"}
+        drawer={dialog?.type === "cart"}
+        viewKey={dialog?.type === "detail" ? dialog.product.id : undefined}
+        navigation={dialog?.navigation && (
+          <DetailNavigation index={dialog.navigation.index} count={dialog.navigation.count}
+            onMove={moveDetail} busy={moving || shop.busy} />
+        )}
+        onKeyDown={event => {
+          if (!dialog?.navigation || event.altKey || event.ctrlKey || event.metaKey ||
+            event.target.closest("input, select, textarea, [contenteditable]")) return;
+          if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+            event.preventDefault();
+            void moveDetail(event.key === "ArrowLeft" ? -1 : 1);
+          }
+        }}
+      >
+        {dialogError && <Alert tone="error">{dialogError}</Alert>}
+        {dialog?.type === "cart" && (
+          <CartPanel
+            shop={shop}
+            onCheckout={() => open({ type: "checkout" })}
+          />
+        )}
+        {dialog?.type === "detail" && (
+          <ProductDetail
+            key={dialog.product.id}
+            product={dialog.product}
+            shop={shop}
+            usdRate={usdRate}
+            onAdded={() => open({ type: "cart" })}
+          />
+        )}
+        {dialog?.type === "price" && (
+          <EditPriceForm product={dialog.product} usdRate={usdRate} busy={shop.busy}
+            onSave={savePrice} onCancel={close} />
+        )}
+        {(dialog?.type === "publish" || dialog?.type === "edit") && (
+          <PublishForm
+            key={dialog.type + (dialog.product?.id || "")}
+            initialProduct={dialog.product}
+            categories={shop.categories.data || []}
+            busy={shop.busy}
+            onSave={publish}
+            onCancel={close}
+          />
+        )}
+        {dialog?.type === "checkout" && (
+          <CheckoutForm
+            shop={shop}
+            onConfirm={checkout}
+            onCancel={() => open({ type: "cart" })}
+          />
+        )}
+        {dialog?.type === "confirmed" && (
+          <div className="nt-order-confirmation">
+            <h3>Pedido guardado en el servidor</h3>
+            <Alert title="SIMULADO · SIN VALIDEZ FINANCIERA">
+              No es un comprobante bancario u oficial. No se realizó ningún
+              cobro.
+            </Alert>
+            <p>
+              Pedido: <strong className="nt-id">{dialog.order.id}</strong>
+            </p>
+            <p>
+              Total simulado: <strong>{formatCLP(dialog.order.total)}</strong>
+            </p>
+            <p>Destino: {dialog.order.shippingAddress}</p>
+            <a
+              className="btn nt-button nt-button--primary"
+              href="#/rastreo"
+              onClick={close}
+            >
+              Ver mis pedidos
+            </a>
+          </div>
+        )}
+        {dialog?.type === "archive" && (
+          <>
+            <p>
+              Se retirará <strong>{dialog.product.name}</strong> del catálogo.
+              No hay restauración disponible en esta API.
+            </p>
+            <div className="nt-form-actions">
+              <Button variant="secondary" onClick={close} disabled={shop.busy}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={archive} disabled={shop.busy}>
+                Confirmar archivado
+              </Button>
+            </div>
+          </>
+        )}
+      </Dialog>
+    </div>
+  );
 }

@@ -1,14 +1,177 @@
-import { useState } from 'react';
-import Badge from '../ui/Badge.jsx';
-import Button from '../ui/Button.jsx';
-import Field from '../ui/Field.jsx';
-import Icon from '../ui/Icon.jsx';
-import ProductImage from '../ui/ProductImage.jsx';
-import ProductSpecifications from './ProductSpecifications.jsx';
-import { finishes, formatCLP, formatUSD } from '../../utils/format.js';
+import { useState } from "react";
+import Button from "../ui/Button.jsx";
+import Field from "../ui/Field.jsx";
+import ProductImage from "../ui/ProductImage.jsx";
+import Alert from "../ui/Alert.jsx";
+import Badge from "../ui/Badge.jsx";
+import ReviewsSection from "../reviews/ReviewsSection.jsx";
+import PriceDisplay from "../ui/PriceDisplay.jsx";
+import { SPEC_FIELDS } from "../../data/filterProfiles.js";
+import { formatSpecValue } from "../../utils/productSpecs.js";
 
-export default function ProductDetail({ product, usdRate, onAdd, onBuy }) {
-  const [quantity, setQuantity] = useState('1');
-  const [finish, setFinish] = useState(finishes[0]);
-  return <><div className="nt-detail-grid"><div><ProductImage src={product.imagen} alt={product.nombre} className="nt-detail-photo" /><div className="nt-seller-panel"><Icon name="user" /><div><span>VENDEDOR DE DEMOSTRACIÓN</span><strong>{product.vendedor}</strong><small>{product.contacto}</small></div></div></div><div><Badge>{product.categoria}</Badge><div className="nt-detail-price"><strong>{formatCLP(product.precio)}</strong>{usdRate && <span>≈ {formatUSD(product.precio / usdRate)}</span>}</div><p className="nt-muted">{product.descripcion}</p><div className="nt-form-row"><Field label="Cantidad" as="select" value={quantity} onChange={(e) => setQuantity(e.target.value)}>{[1, 2, 3].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'unidad' : 'unidades'}</option>)}</Field><Field label="Acabado / color" as="select" value={finish} onChange={(e) => setFinish(e.target.value)}>{finishes.map((value) => <option key={value}>{value}</option>)}</Field></div><div className="nt-detail-actions"><Button icon="cart" onClick={() => onAdd(product.id, Number(quantity), finish)}>Añadir al carrito</Button><Button variant="secondary" icon="arrow" onClick={() => onBuy(product.id, Number(quantity), finish)}>Comprar ahora</Button></div></div></div><ProductSpecifications product={product} /><section className="nt-reviews" aria-labelledby="resenas-titulo"><h3 id="resenas-titulo">Reseñas de ejemplo</h3>{product.reseñas?.length ? product.reseñas.map((review, index) => <article className="nt-review" key={review.usuario + index}><div className="nt-review-header"><span className="nt-review-avatar">{review.usuario.split(' ').slice(0, 2).map((part) => part[0]).join('')}</span><strong>{review.usuario}</strong><span className="nt-rating" role="img" aria-label={review.rating + ' de 5 estrellas'}>{Array.from({ length: 5 }, (_, i) => <Icon key={i} name="star" size={13} filled={i < review.rating} />)}</span></div><p>{review.texto}</p></article>) : <p className="nt-muted">Esta publicación todavía no tiene reseñas.</p>}</section></>;
+export default function ProductDetail({ product: p, shop, onAdded, usdRate }) {
+  const [quantity, setQuantity] = useState(1);
+  const [error, setError] = useState("");
+  const [asked, setAsked] = useState(false);
+  const [messageError, setMessageError] = useState("");
+  const isDemo = Boolean(p.isDemo);
+  const own = !isDemo && shop.user?.id === p.sellerId;
+  const specs = isDemo ? p.specs || [] : SPEC_FIELDS.filter(({ key, source }) =>
+    !source && p.technical?.values?.[key] !== undefined).map(def => {
+      const v = p.technical.values[def.key];
+      return def.label.replace(/\s+m[ií]nim[oa]|\s+m[aá]xim[oa]/gi, "") + ": " +
+        (Array.isArray(v) ? v : [v]).map(value => formatSpecValue(def, value)).join(", ");
+    });
+
+  async function add() {
+    if (isDemo) return;
+    if (!shop.user) {
+      location.hash = "/acceso";
+      return;
+    }
+    try {
+      await shop.run(
+        () => shop.api.setQuantity(p.id, quantity),
+        "Carrito actualizado.",
+      );
+      onAdded();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+  async function ask(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const message = new FormData(form).get("message").trim();
+    if (message.length < 2) {
+      setMessageError("Escribe una pregunta de al menos 2 caracteres.");
+      return;
+    }
+    setMessageError("");
+    try {
+      await shop.run(() => shop.api.createInteraction({
+        targetId: p.id, receiverId: p.sellerId, targetType: "product", message,
+      }));
+      form.reset();
+      setAsked(true);
+    } catch (err) {
+      setMessageError(err.message);
+    }
+  }
+
+  return (
+    <div className="nt-product-detail-wrap">
+      <div className="nt-detail-grid">
+        <ProductImage
+          src={p.imageUrl}
+          alt={p.name}
+          className="nt-detail-photo"
+        />
+        <div>
+          <div className="nt-detail-badges">
+            {p.category && (
+              <Badge variant="muted">
+                {p.category}
+                {p.subcategory ? ` · ${p.subcategory}` : ""}
+              </Badge>
+            )}
+            {p.condition && (
+              <Badge variant={p.condition === "Nuevo" ? "success" : "cyan"}>
+                Estado: {p.condition}
+              </Badge>
+            )}
+            {p.isIllustration && (
+              <Badge variant="muted">Ilustración representativa</Badge>
+            )}
+            {isDemo && (
+              <span className="nt-demo-review-badge">
+                Catálogo de demostración
+              </span>
+            )}
+          </div>
+
+          <h3>{p.name}</h3>
+          <PriceDisplay amount={p.price} usdRate={usdRate} className="nt-detail-price" />
+          <p>{p.description}</p>
+
+          {specs.length > 0 && (
+            <ul className="nt-detail-specs" aria-label="Características del producto">
+              {specs.map((spec) => (
+                <li key={spec}>{spec}</li>
+              ))}
+            </ul>
+          )}
+
+          <p className="nt-detail-meta-line">
+            <strong>Stock disponible:</strong>{" "}
+            {p.stock > 0 ? `${p.stock} unidades` : "Agotado"}
+          </p>
+          <p className="nt-detail-meta-line">
+            <strong>Vendedor:</strong>{" "}
+            {isDemo
+              ? p.sellerLabel || "Catálogo demostrativo"
+              : own
+                ? "Tu cuenta"
+                : p.sellerId}
+          </p>
+
+          {isDemo ? (
+            <Alert title="Vista previa de catálogo">
+              Este ítem pertenece al catálogo de demostración de 240 productos.
+              Para comprar o agregar al carrito real, publica o selecciona un
+              producto guardado en PostgreSQL.
+            </Alert>
+          ) : (
+            <>
+              <Field
+                label="Cantidad"
+                type="number"
+                min={1}
+                max={Math.min(p.stock, 100)}
+                step={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+              />
+              <Button
+                disabled={
+                  shop.busy ||
+                  own ||
+                  !p.isActive ||
+                  p.stock < 1 ||
+                  !Number.isInteger(quantity) ||
+                  quantity < 1 ||
+                  quantity > Math.min(100, p.stock)
+                }
+                onClick={add}
+              >
+                {p.stock < 1 ? "Agotado" : "Añadir al carrito"}
+              </Button>
+              {error && <Alert tone="error">{error}</Alert>}
+              <p className="nt-muted nt-detail-note">
+                El stock se valida nuevamente al confirmar el pedido en el servidor.
+              </p>
+              {!own && p.isActive && (
+                <details className="nt-product-specs">
+                  <summary>Consultar al vendedor</summary>
+                  <div className="nt-product-specs-body">
+                    {shop.user ? (
+                      <form onSubmit={ask}>
+                        <Field label="Tu pregunta" name="message" as="textarea" rows={2}
+                          required minLength={2} maxLength={1000} />
+                        <Button type="submit" disabled={shop.busy}>Enviar consulta</Button>
+                        {messageError && <Alert tone="error">{messageError}</Alert>}
+                        {asked && !messageError && <p role="status">Consulta guardada. <a href="#/historial">Ver actividad</a></p>}
+                      </form>
+                    ) : <a href="#/acceso">Inicia sesión para enviar una consulta.</a>}
+                  </div>
+                </details>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {isDemo && <ReviewsSection product={p} shop={shop} />}
+    </div>
+  );
 }

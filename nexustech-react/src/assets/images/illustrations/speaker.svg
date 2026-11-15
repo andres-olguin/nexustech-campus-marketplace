@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 320" width="500" height="320">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#051430"/><stop offset="100%" stop-color="#0b2249"/></linearGradient></defs>
+  <rect width="500" height="320" fill="url(#bg)"/>
+  <rect x="155" y="85" width="80" height="145" rx="10" fill="#0f2b5c" stroke="#00d2ff" stroke-width="3"/>
+  <rect x="265" y="85" width="80" height="145" rx="10" fill="#0f2b5c" stroke="#00d2ff" stroke-width="3"/>
+  <circle cx="195" cy="122" r="14" fill="#03102c" stroke="#38bdf8" stroke-width="2"/>
+  <circle cx="195" cy="180" r="24" fill="#03102c" stroke="#00d2ff" stroke-width="2.5"/>
+  <circle cx="305" cy="122" r="14" fill="#03102c" stroke="#38bdf8" stroke-width="2"/>
+  <circle cx="305" cy="180" r="24" fill="#03102c" stroke="#00d2ff" stroke-width="2.5"/>
+  <text x="250" y="285" text-anchor="middle" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="13" font-weight="600">ILUSTRACIÓN REPRESENTATIVA · MONITORES DE AUDIO</text>
+</svg>
