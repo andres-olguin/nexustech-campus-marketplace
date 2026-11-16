@@ -1,9 +1,9 @@
 name: Hito 3 - Compose real
 on:
   push:
-    branches: [main, 'entrega/**']
+    branches: [main, 'entrega/**', 'fix/frontend-detalle-carrito-hito3-20261116']
   pull_request:
-    branches: [main]
+    branches: [main, 'entrega/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   compose:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       COMPOSE_PROJECT_NAME: nexustech-hito3-ci
     steps:
@@ -38,6 +38,31 @@ jobs:
           docker compose --env-file .env.ci cp backend/docs/HTTP_EXAMPLES.json web:/backend/docs/HTTP_EXAMPLES.json
           docker compose --env-file .env.ci exec -T web npm run build
           docker compose --env-file .env.ci exec -T web npm test
+      - name: Preparar navegador de pruebas Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias de pruebas E2E
+        run: |
+          npm ci --prefix nexustech-react
+          cd nexustech-react
+          npx playwright install --with-deps chromium
+      - name: Ejecutar Playwright contra React, NestJS, PostgreSQL y MongoDB
+        env:
+          TEST_UI_URL: http://127.0.0.1:5173
+          TEST_API_URL: http://127.0.0.1:3001/api/v1
+        run: |
+          cd nexustech-react
+          npx playwright test
+      - name: Conservar evidencia de fallos Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-fallos
+          path: |
+            nexustech-react/test-results/
+            nexustech-react/playwright-report/
+          if-no-files-found: ignore
       - name: Estado y diagnostico
         if: always() && hashFiles('.env.ci') != ''
         run: |
