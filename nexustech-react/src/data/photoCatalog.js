@@ -119,7 +119,7 @@ const GROUPS = {
   analytics: [Q.analytics,N.desk,Q.monitor,N.printer]
 };
 function categoryKeyFor(item) {
-  const n = String(item.name||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase();
+  const n = String(item.name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   if (/mochila|backpack|bolso/.test(n)) return "laptopBag";
   if (/soporte de notebook|soporte para laptop|base elevadora/.test(n)) return "laptopStand";
   if (/cargador|adaptador de corriente/.test(n)) return "charger";
