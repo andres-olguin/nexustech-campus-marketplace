@@ -33,7 +33,11 @@ export default function ProductDetail({ product: p, shop, onAdded, usdRate }) {
     }
     try {
       await shop.run(
-        () => shop.api.setQuantity(p.id, quantity),
+        // Se suman unidades existentes; corrección aportada por Miguel en PR #13.
+        () => shop.api.setQuantity(
+          p.id,
+          (shop.cart?.items.find(item => item.productId === p.id)?.quantity || 0) + quantity,
+        ),
         "Carrito actualizado.",
       );
       onAdded();
