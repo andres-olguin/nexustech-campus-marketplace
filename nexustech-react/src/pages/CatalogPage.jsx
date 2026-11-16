@@ -18,7 +18,7 @@ const DEMO_PAGE_LIMIT = 24;
 const LIVE_PAGE_LIMIT = 20;
 const NO_FACETS = {};
 // Los sufijos aleatorios identifican datos de prueba, no son nombres comerciales.
-const visibleCategory = (name = "") => name.replace(/\\s+demo\\s+[0-9a-f]{8}$/i, "");
+const visibleCategory = (name = "") => name.replace(/\s+demo\s+[0-9a-f]{8}$/i, "");
 
 export default function CatalogPage({
   shop,

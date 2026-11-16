@@ -23,13 +23,15 @@ test("Respaldos distintos por publicación e identificables como SVG local", () 
   const a = fallbackArtworkForProduct("Mochila para notebook demo", "producto-1");
   const b = fallbackArtworkForProduct("Soporte de notebook demo", "producto-2");
   const c = fallbackArtworkForProduct("Mochila para notebook demo", "producto-3");
-  assert.match(a, /^data:image\\/svg\\+xml;charset=utf-8,/);
+  assert.match(a, /^data:image\/svg\+xml;charset=utf-8,/);
   assert.notEqual(a, b);
   assert.notEqual(a, c);
   const xml = decodeURIComponent(a.split(",")[1]);
   assert.match(xml, /MOCHILA/);
   assert.match(xml, /Mochila para notebook demo/);
-  assert.doesNotMatch(fallbackArtworkForProduct("<script>alert(1)</script>"), /<script>/);
+  const safeSvg = decodeURIComponent(fallbackArtworkForProduct("<script>alert(1)</script>").split(",")[1]);
+  assert.doesNotMatch(safeSvg, /<script>/);
+  assert.match(safeSvg, /&lt;script&gt;/);
 });
 
 test("Las publicaciones SQL nunca reciben la misma URL de foto", () => {
@@ -48,7 +50,6 @@ test("Las publicaciones SQL nunca reciben la misma URL de foto", () => {
   assert.equal(new Set(urls).size, urls.length);
   assert.ok(results.every(url => !url || url.startsWith("https://images.unsplash.com/")));
   // El cupo temático se agota: no asignar una foto no relacionada.
-  const exhausted = new Set(["https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&q=80"]);
   assert.ok(uniquePhotoForItem({ name: "Mochila para notebook demo" }, new Set([
     "https://images.unsplash.com/photo-1535982330050-f1c2fb79ff78?w=500&q=78",
     "https://images.unsplash.com/photo-1668114844900-537ab91478b9?w=500&q=78",
