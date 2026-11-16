@@ -191,6 +191,34 @@ async function ready(url, child) {
       { categoryKey: "accessories", name: "Soporte de notebook demo", description: "Soporte ergonomico ficticio para una publicacion.", stock: 4, price: 15990 },
       { categoryKey: "accessories", name: "Mochila para notebook demo", description: "Mochila de muestra para pruebas de catalogo.", stock: 3, price: 24990 },
     ];
+    // Más publicaciones: datos propios de catálogo sintético original del equipo,
+    // publicados por API HTTP para que existan REALMENTE en PostgreSQL.
+    const [catalog1,catalog2,catalog3,{photoUrlForKey}] = await Promise.all([
+      import(pathToFileURL(join(root, "src/data/catalogPart1.js")).href),
+      import(pathToFileURL(join(root, "src/data/catalogPart2.js")).href),
+      import(pathToFileURL(join(root, "src/data/catalogPart3.js")).href),
+      import(pathToFileURL(join(root, "src/data/photoCatalog.js")).href),
+    ]);
+    const allCatalog = [...catalog1.part1Products,...catalog2.part2Products,...catalog3.part3Products];
+    const categoriesSource = ["Notebooks","Computadores","Componentes","Almacenamiento",
+      "Monitores","Periféricos","Audio","Smartphones","Tablets","Redes","Impresoras","Accesorios"];
+    const mappedKeys = {
+      "Notebooks":"computers","Computadores":"computers","Componentes":"components",
+      "Almacenamiento":"components","Monitores":"computers","Periféricos":"peripherals",
+      "Audio":"peripherals","Smartphones":"accessories","Tablets":"computers",
+      "Redes":"networks","Impresoras":"peripherals","Accesorios":"accessories",
+    };
+    const selected = categoriesSource.flatMap(category =>
+      allCatalog.filter(item => item.category === category).slice(0,5));
+    const catalogExtras = selected.map(item=>({
+      categoryKey: mappedKeys[item.category],
+      name: (item.name.length > 150 ? item.name.slice(0,150) : item.name) + " · demo",
+      description: item.description.slice(0,1800),
+      price: Math.max(1000,Math.min(2500000,Math.floor(item.price))),
+      stock: Math.max(1,Math.min(100,Number(item.stock)||1)),
+      imageUrl: photoUrlForKey(item.imgKey),
+    }));
+    products.push(...catalogExtras);
     const created = [];
     for (const product of products) {
       const { categoryKey = "components", ...payload } = product;
@@ -205,6 +233,7 @@ async function ready(url, child) {
     console.log("Vendedor: " + seller.email);
     console.log("Comprador: " + buyer.email);
     console.log("Clave de ambas cuentas: " + passwordDemo);
+    console.log("Publicaciones SQL ficticias totales: " + created.length + " (24 iniciales + " + catalogExtras.length + " añadidas desde el catálogo ilustrativo)");
     console.log("Productos ficticios (UUID):");
     for (const item of created) console.log(" - " + item.name + " | " + item.id);
     console.log("Los pagos y despachos son simulados. Los datos temporales se eliminan al cerrar.");

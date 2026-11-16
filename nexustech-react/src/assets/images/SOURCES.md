@@ -48,3 +48,6 @@ Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, lic
 - `laptop-stand.svg` / `laptop-bag.svg`: Soportes ergonómicos, bases refrigerantes, fundas y mochilas.
 - `tools-electronics.svg`: Multímetros, kits de precisión, calculadoras y pasta térmica.
 - `tablet-ereader.svg`: E-readers de tinta electrónica y tabletas digitalizadoras.
+
+## Cierre de la demo (16-11-2026)
+El catálogo muestra exclusivamente **fotografías de origen web Unsplash** ya incluidas como JPEG locales, nunca ilustraciones vectoriales en tarjetas. Se reutilizan las 21 fotografías web del inventario anterior para 240 fichas ficticias y las publicaciones SQL de prueba, seleccionando la imagen de categoría más cercana. **No son fotos verificadas del artículo exacto** y se indican como referenciales. Las reseñas de ejemplo son textos ficticios originales generados para demostrar el componente React: no corresponden a ventas ni a compradores reales y no están persistidas como opiniones de usuarios.

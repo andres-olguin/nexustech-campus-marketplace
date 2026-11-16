@@ -5,6 +5,7 @@ import ProductImage from "../ui/ProductImage.jsx";
 import Alert from "../ui/Alert.jsx";
 import Badge from "../ui/Badge.jsx";
 import ReviewsSection from "../reviews/ReviewsSection.jsx";
+import { syntheticReviewsForProduct } from "../../data/syntheticReviews.js";
 import PriceDisplay from "../ui/PriceDisplay.jsx";
 import { SPEC_FIELDS } from "../../data/filterProfiles.js";
 import { formatSpecValue } from "../../utils/productSpecs.js";
@@ -15,6 +16,7 @@ export default function ProductDetail({ product: p, shop, onAdded, usdRate }) {
   const [asked, setAsked] = useState(false);
   const [messageError, setMessageError] = useState("");
   const isDemo = Boolean(p.isDemo);
+  const isSeedDemo = !isDemo && /(?:\bdemo\b|\bprueba\b)/i.test(p.name);
   const own = !isDemo && shop.user?.id === p.sellerId;
   const specs = isDemo ? p.specs || [] : SPEC_FIELDS.filter(({ key, source }) =>
     !source && p.technical?.values?.[key] !== undefined).map(def => {
@@ -171,7 +173,7 @@ export default function ProductDetail({ product: p, shop, onAdded, usdRate }) {
         </div>
       </div>
 
-      {isDemo && <ReviewsSection product={p} shop={shop} />}
+      {(isDemo || isSeedDemo) && <ReviewsSection product={isDemo ? p : { ...p, isDemo: true, reviews: syntheticReviewsForProduct(p, 2) }} shop={shop} />}
     </div>
   );
 }

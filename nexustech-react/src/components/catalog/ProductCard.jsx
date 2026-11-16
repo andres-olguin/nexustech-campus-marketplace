@@ -21,7 +21,7 @@ export default function ProductCard({
 }) {
   const isDemo = Boolean(p.isDemo);
   const detailTarget = isDemo ? p : p.id;
-  const hasReferenceImage = !isDemo && !p.imageUrl && Boolean(representativeLiveImage(p.name));
+  const hasReferenceImage = !isDemo && (!p.imageUrl || /^https:\/\/images\.unsplash\.com\//.test(p.imageUrl));
 
   const stockClass =
     p.stock > 3
@@ -51,11 +51,11 @@ export default function ProductCard({
           {isDemo
             ? p.isIllustration
               ? "ILUSTRACIÓN · DEMO"
-              : "DEMO · VIÑA DEL MAR"
+              : "FOTO WEB · DEMO"
             : !p.isActive
               ? "ARCHIVADO"
               : hasReferenceImage
-                ? "IMAGEN REFERENCIAL"
+                ? "FOTO WEB REFERENCIAL"
                 : "VIÑA DEL MAR"}
         </span>
         {p.condition && (
