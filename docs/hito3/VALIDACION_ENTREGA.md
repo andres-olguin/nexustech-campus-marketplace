@@ -19,3 +19,11 @@ La frase anterior «queda ejecutar los contenedores en GitHub Actions» correspo
 - **No confirmado por esta prueba:** arranque en el laptop específico del equipo, recuperación de un fallo de WSL/Docker Desktop, el segundo envío a Canvas ni la defensa oral. Esas acciones son pendientes independientes.
 
 Ver [guía de cierre y defensa](CIERRE_Y_DEFENSA_2026-11-16.md).
+
+## Cierre 16/11/2026 — versión entregable
+
+- Commit `main`: `7c8abbe95bcb82781e5f6192eac223b9e6fde341`.
+- **CI Docker + Playwright aprobado:** [43802108387](https://github.com/andres-olguin/nexustech-campus-marketplace/actions/runs/43802108387) y [43802107810](https://github.com/andres-olguin/nexustech-campus-marketplace/actions/runs/43802107810).
+- Windows: el equipo reportó arranque del lanzador sin Docker de cuatro servicios y 84 productos SQL.
+- ZIP generado, pendiente de confirmar en Canvas: `NexusTech_Hito3_16NOV_7c8abbe95.zip` con SHA-256 `6F4970E3ABBD62700D788D777A68B991F768E088E0090D05337186CC7FBE2A53`.
+- Demostración manual end-to-end y defensa: **no marcarlas completadas** sin su ejecución. Ver [acta y checklist](ACTA_PRUEBAS_ENTREGA_2026-11-16.md).
