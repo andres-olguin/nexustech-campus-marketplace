@@ -161,3 +161,21 @@ export function photoUrlForItem(item, index=0, recent=[]) {
   return [...Object.values(PHOTO_URLS),...Object.values(MORE_PHOTOS)]
     .find(url=>!recent.includes(url)) || options[start];
 }
+
+/**
+ * Selecciona una foto distinta por publicación de la demo SQL.
+ * Si no existe una foto temática sin reutilizar, devuelve null:
+ * es preferible un respaldo visual explícito a una foto equivocada.
+ * used debe ser un Set que se mantiene durante toda la carga.
+ */
+export function uniquePhotoForItem(item, used = new Set()) {
+  const key = categoryKeyFor(item);
+  const candidates = GROUPS[key] || GROUPS[PHOTO_REMAP[key]] || GROUPS.analytics;
+  for (const url of candidates) {
+    if (!used.has(url)) {
+      used.add(url);
+      return url;
+    }
+  }
+  return null;
+}

@@ -55,3 +55,10 @@ El catálogo muestra exclusivamente **fotografías de origen web Unsplash** ya i
 
 ## Diversidad de imágenes — actualización del 16/11/2026
 Se incorporaron 26 fotos web de Unsplash específicas para equipos y accesorios; la función `photoUrlForItem` evita repetir la misma foto entre las seis tarjetas previas del catálogo y del cargador SQL. Son fotos referenciales, no prueban el modelo del artículo. Las fotos nuevas requieren Internet; el componente mantiene imágenes locales para el modo sin red.
+
+## Respaldo visual y no repetición en la demo SQL — 16/11/2026
+
+- Al cargar publicaciones SQL desde el lanzador sin Docker, se asigna cada URL de foto temática **una sola vez**. Si no quedan fotos temáticas distintas, se deja `imageUrl` vacío en vez de reutilizar una foto que no corresponde al artículo.
+- Si la foto externa no carga o está ausente, `ProductImage.jsx` utiliza un SVG local generado a partir del tipo y nombre de la publicación, sin dependencias de red. La tarjeta informa **IMAGEN ILUSTRATIVA · SIN FOTO**, sin afirmar que sea una fotografía real.
+- La garantía automática cubre la **selección única de URL para publicaciones SQL** y la generación de respaldos distintos por producto. El catálogo ilustrativo de 240 fichas continúa reutilizando fotografías referenciales, identificadas como demostración, y no debe confundirse con los productos SQL.
+- Al cerrar y volver a ejecutar `scripts/hito3-demo-sin-docker.cjs`, se crea una base temporal nueva con el código actualizado; el servidor que ya estaba levantado no sustituye los datos automáticamente.

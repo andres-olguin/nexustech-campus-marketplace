@@ -17,6 +17,8 @@ import { DEMO_CATEGORIES, getDemoCatalog } from "../data/demoCatalog.js";
 const DEMO_PAGE_LIMIT = 24;
 const LIVE_PAGE_LIMIT = 20;
 const NO_FACETS = {};
+// Los sufijos aleatorios identifican datos de prueba, no son nombres comerciales.
+const visibleCategory = (name = "") => name.replace(/\\s+demo\\s+[0-9a-f]{8}$/i, "");
 
 export default function CatalogPage({
   shop,
@@ -97,7 +99,7 @@ export default function CatalogPage({
   const options = useMemo(() => isDemoActive ? demoFiltered.options :
     optionsFromApi(profile.fields, remoteOptions.data || [], selections),
     [isDemoActive, demoFiltered, profile, remoteOptions.data, selections]);
-  const categoryNames = new Map(categories.map(c => [c.id, c.name]));
+  const categoryNames = new Map(categories.map(c => [c.id, visibleCategory(c.name)]));
   const data = isDemoActive ? {
     items: demoFiltered.results.slice((page - 1) * DEMO_PAGE_LIMIT, page * DEMO_PAGE_LIMIT),
     page, limit: DEMO_PAGE_LIMIT, total: demoFiltered.results.length,
@@ -236,7 +238,7 @@ export default function CatalogPage({
                     ))
                   : categories.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {visibleCategory(c.name)}
                       </option>
                     ))}
               </Field>

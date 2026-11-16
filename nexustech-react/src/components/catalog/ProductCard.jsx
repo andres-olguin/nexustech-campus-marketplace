@@ -1,9 +1,9 @@
+import { useState } from "react";
 import Badge from "../ui/Badge.jsx";
 import Button from "../ui/Button.jsx";
 import Icon from "../ui/Icon.jsx";
 import ProductImage from "../ui/ProductImage.jsx";
 import PriceDisplay from "../ui/PriceDisplay.jsx";
-import { representativeLiveImage } from "../../data/imageAssets.js";
 
 export default function ProductCard({
   product: p,
@@ -19,6 +19,7 @@ export default function ProductCard({
   busy,
   usdRate,
 }) {
+  const [usingFallbackArtwork, setUsingFallbackArtwork] = useState(false);
   const isDemo = Boolean(p.isDemo);
   const detailTarget = isDemo ? p : p.id;
   const hasReferenceImage = !isDemo && (!p.imageUrl || /^https:\/\/images\.unsplash\.com\//.test(p.imageUrl));
@@ -45,7 +46,8 @@ export default function ProductCard({
           onClick={() => onDetail(detailTarget)}
           aria-label={"Ver detalle de " + p.name}
         >
-          <ProductImage src={p.imageUrl} alt={p.name} loading="lazy" />
+          <ProductImage src={p.imageUrl} alt={p.name} visualKey={p.id}
+            onFallbackChange={setUsingFallbackArtwork} loading="lazy" />
         </button>
         <span className={"nt-photo-label" + (!p.isActive ? " is-archived" : "")}>
           {isDemo
@@ -54,8 +56,10 @@ export default function ProductCard({
               : "FOTO WEB · DEMO"
             : !p.isActive
               ? "ARCHIVADO"
-              : hasReferenceImage
-                ? "FOTO WEB REFERENCIAL"
+              : usingFallbackArtwork
+                ? "IMAGEN ILUSTRATIVA · SIN FOTO"
+                : hasReferenceImage
+                  ? "FOTO WEB REFERENCIAL"
                 : "VIÑA DEL MAR"}
         </span>
         {p.condition && (
