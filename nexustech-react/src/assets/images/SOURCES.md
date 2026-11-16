@@ -51,3 +51,7 @@ Creadas localmente en SVG optimizado (< 1 KB c/u, sin dependencias externas, lic
 
 ## Cierre de la demo (16-11-2026)
 El catálogo muestra exclusivamente **fotografías de origen web Unsplash** ya incluidas como JPEG locales, nunca ilustraciones vectoriales en tarjetas. Se reutilizan las 21 fotografías web del inventario anterior para 240 fichas ficticias y las publicaciones SQL de prueba, seleccionando la imagen de categoría más cercana. **No son fotos verificadas del artículo exacto** y se indican como referenciales. Las reseñas de ejemplo son textos ficticios originales generados para demostrar el componente React: no corresponden a ventas ni a compradores reales y no están persistidas como opiniones de usuarios.
+
+
+## Diversidad de imágenes — actualización del 16/11/2026
+Se incorporaron 26 fotos web de Unsplash específicas para equipos y accesorios; la función `photoUrlForItem` evita repetir la misma foto entre las seis tarjetas previas del catálogo y del cargador SQL. Son fotos referenciales, no prueban el modelo del artículo. Las fotos nuevas requieren Internet; el componente mantiene imágenes locales para el modo sin red.
