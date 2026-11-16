@@ -193,7 +193,7 @@ async function ready(url, child) {
     ];
     // Más publicaciones: datos propios de catálogo sintético original del equipo,
     // publicados por API HTTP para que existan REALMENTE en PostgreSQL.
-    const [catalog1,catalog2,catalog3,{photoUrlForKey}] = await Promise.all([
+    const [catalog1,catalog2,catalog3,{photoUrlForItem}] = await Promise.all([
       import(pathToFileURL(join(root, "src/data/catalogPart1.js")).href),
       import(pathToFileURL(join(root, "src/data/catalogPart2.js")).href),
       import(pathToFileURL(join(root, "src/data/catalogPart3.js")).href),
@@ -216,14 +216,18 @@ async function ready(url, child) {
       description: item.description.slice(0,1800),
       price: Math.max(1000,Math.min(2500000,Math.floor(item.price))),
       stock: Math.max(1,Math.min(100,Number(item.stock)||1)),
-      imageUrl: photoUrlForKey(item.imgKey),
+      imgKey: item.imgKey,
     }));
     products.push(...catalogExtras);
     const created = [];
+    const recentPhotos=[];
     for (const product of products) {
-      const { categoryKey = "components", ...payload } = product;
+      const { categoryKey = "components", imgKey, ...payload } = product;
+      const image=photoUrlForItem({...product,imgKey},created.length,recentPhotos);
+      recentPhotos.push(image);
+      if(recentPhotos.length>6)recentPhotos.shift();
       const item = await callApi("/products", "POST",
-        { ...payload, categoryId: categoryIds[categoryKey] }, s.accessToken, 201);
+        { ...payload, imageUrl:image, categoryId: categoryIds[categoryKey] }, s.accessToken, 201);
       created.push({ name: item.name, id: item.id });
     }
     console.log("\n========== NEXUSTECH EN EJECUCION SIN DOCKER ==========");
