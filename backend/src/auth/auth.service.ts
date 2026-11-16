@@ -19,7 +19,7 @@ export class AuthService {
   }
   async login(dto: LoginDto) {
     const user = await this.db.getRepository(User).createQueryBuilder('u').addSelect('u.passwordHash').where('u.email = :email', { email: dto.email }).getOne();
-    // Perform equivalent hashing work when email is unknown to reduce enumeration by timing.
+    // Si el correo no existe, igual verificamos un hash de prueba para no dar pistas por el tiempo de respuesta.
     const valid = await verifyPassword(dto.password, user?.passwordHash || `${'0'.repeat(32)}:${'0'.repeat(128)}`);
     if (!user || !valid) throw new UnauthorizedException('Credenciales inválidas');
     return this.session(user);

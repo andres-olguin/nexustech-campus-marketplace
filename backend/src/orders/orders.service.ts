@@ -8,7 +8,7 @@ export class OrdersService {
   constructor(private readonly db: DataSource, private readonly events: ActivityEvents) {}
   async checkout(userId: string, dto: CheckoutDto) {
     const result = await this.db.transaction(async em => {
-      // Same lock as cart writes: serializes checkout and edits, including an empty cart.
+      // Usamos el mismo bloqueo del carrito para que una compra no se cruce con otra edición.
       await em.findOneOrFail(User, { where: { id: userId }, lock: { mode: 'pessimistic_write' } });
       const previous = await em.findOneBy(Order, { userId, idempotencyKey: dto.idempotencyKey });
       if (previous) {
@@ -17,7 +17,7 @@ export class OrdersService {
       }
       const cart = await em.find(CartItem, { where: { userId }, order: { productId: 'ASC' } });
       if (!cart.length) throw new ConflictException('Carrito vacío');
-      // Deterministic lock order across buyers avoids deadlocks over overlapping carts.
+      // Bloqueamos los productos siempre en el mismo orden para evitar esperas cruzadas entre compras.
       const products = await em.find(Product, { where: { id: In(cart.map(i => i.productId)) }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_write' } });
       const byId = new Map(products.map(p => [p.id, p]));
       let total = 0;
@@ -87,7 +87,7 @@ export class OrdersService {
   }
   async advance(sellerId: string, id: string, dto: FulfillmentStatusDto) {
     const result = await this.db.transaction(async em => {
-      // Shared with cancellation and other sellers: serializes all order transitions.
+      // Este bloqueo también se usa al cancelar, así no se pisan los cambios de estado.
       const order = await em.findOne(Order, { where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!order) throw new NotFoundException('Pedido no encontrado');
       const segments = await em.findBy(OrderFulfillment, { orderId: id });
@@ -109,12 +109,12 @@ export class OrdersService {
   private async sellerDetails(em: EntityManager, order: Order, sellerId: string) {
     const items = await em.find(OrderItem, { where: { orderId: order.id, sellerId }, order: { id: 'ASC' } });
     const fulfillment = await em.findOneByOrFail(OrderFulfillment, { orderId: order.id, sellerId });
-    // Do not disclose other sellers' items, overall total, buyer identity or payment data.
+    // Cada vendedor ve solamente su parte del pedido; no mostramos datos de otros vendedores.
     return { id: order.id, createdAt: order.createdAt, orderStatus: order.status, shippingAddress: order.shippingAddress,
       subtotal: items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0), items, fulfillment };
   }
   private async details(em: EntityManager, order: Order) {
-    // A transaction owns one pg connection; avoid concurrent query() calls on that client.
+    // Dentro de la transacción se usa una misma conexión. Por eso estas consultas van en orden.
     const items = await em.find(OrderItem, { where: { orderId: order.id }, order: { id: 'ASC' } });
     const transactions = await em.findBy(SimulatedTransaction, { orderId: order.id });
     const fulfillments = await em.find(OrderFulfillment, { where: { orderId: order.id }, order: { sellerId: 'ASC' } });

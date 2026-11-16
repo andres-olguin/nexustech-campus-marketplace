@@ -10,7 +10,7 @@ const object = (properties: Record<string, SchemaObject>): SchemaObject => ({ ty
 const record = (fields: Record<string, SchemaObject>) => object({ id: uuid, createdAt: date, ...fields });
 const page = (name: string) => object({ items: array(ref(name)), total: integer, page: integer, limit: integer });
 
-/** Explicit output schemas: persistence entities never expose passwordHash in OpenAPI. */
+/** Definimos las respuestas por separado para que Swagger no muestre campos privados como passwordHash. */
 export function addResponseSchemas(document: OpenAPIObject) {
   const schemas: Record<string, SchemaObject> = {
     PublicUser: object({ id: uuid, email: { type: 'string', format: 'email' }, name: text }),

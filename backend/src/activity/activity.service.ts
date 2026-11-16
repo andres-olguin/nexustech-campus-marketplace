@@ -72,7 +72,7 @@ export class ActivityService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** At-least-once delivery; stable SQL event UUID prevents duplicate Mongo documents. */
+  /** Reintentamos los eventos cuando haga falta. El ID guardado en SQL evita repetirlos en MongoDB. */
   flushOutbox(): Promise<void> {
     if (this.stopping) return Promise.resolve();
     return this.drainPromise ??= this.drainOutbox().finally(() => { this.drainPromise = undefined; });
