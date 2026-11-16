@@ -8,8 +8,10 @@ const { join, resolve, dirname, sep } = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { randomBytes } = require("node:crypto");
 const exec = promisify(execFile);
-const root = resolve(__dirname, "..");
-const backend = resolve(root, "../backend");
+// Este script está en <repositorio>/scripts, no en nexustech-react/scripts.
+const project = resolve(__dirname, "..");
+const root = resolve(project, "nexustech-react");
+const backend = resolve(project, "backend");
 const children = [];
 function launch(args, cwd, env, name = "child") {
   const child = spawn(process.execPath, args, {
