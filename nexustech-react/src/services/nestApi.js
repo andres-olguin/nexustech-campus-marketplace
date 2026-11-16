@@ -225,7 +225,7 @@ export function createApiClient({
           onUnauthorized();
         }
         const header = response.headers.get("Retry-After");
-        // Retry-After may not be exposed by the API's CORS configuration.
+        // Puede que el navegador no deje leer Retry-After si CORS no expone ese encabezado.
         const retry = header
           ? Math.max(
               0,

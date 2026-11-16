@@ -23,7 +23,7 @@ export class OrderFulfillments1794272400000 implements MigrationInterface {
     `);
   }
   async down(q: QueryRunner): Promise<void> {
-    // Do not silently erase tracking already used in a demonstration/shared database.
+    // No borramos el seguimiento que ya pudiera existir en una base usada para pruebas.
     await q.query(`DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM order_fulfillments WHERE status NOT IN ('confirmed','cancelled')) THEN
         RAISE EXCEPTION 'Cannot revert: fulfillment tracking has progressed';

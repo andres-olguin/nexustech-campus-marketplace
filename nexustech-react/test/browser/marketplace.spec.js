@@ -564,7 +564,7 @@ test("React sends private messages to real MongoDB and reads them after reload",
   await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();
   await expect(page.getByText(message, { exact: true })).toBeVisible();
   await page.reload();
-  // Session tokens intentionally live only in memory: authenticate again after reload.
+  // Los tokens de sesión quedan en memoria; al recargar hay que iniciar sesión de nuevo.
   await login(page, "mongo-buyer-" + run + "@example.test");
   await nav(page, "historial");
   await page.getByRole("button", { name: /Conversaciones e Interacciones/ }).click();

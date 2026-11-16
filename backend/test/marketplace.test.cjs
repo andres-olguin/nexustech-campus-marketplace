@@ -26,7 +26,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
   const apiPort = await freePort();
   const pg = new EmbeddedPostgres({ databaseDir: dir, port: pgPort, user: 'postgres', password,
     persistent: true, initdbFlags: ['--locale=C', '--encoding=UTF8'],
-    // PostgreSQL 18 io workers may retain inherited pipes after taskkill on Windows.
+    // En Windows, algunos procesos de PostgreSQL 18 siguen usando las tuberías incluso después de taskkill.
     postgresFlags: ['-c', 'io_method=sync', '-c', 'listen_addresses=127.0.0.1', '-c', 'unix_socket_directories='],
     onLog: () => {}, onError: () => {} });
   let db, app;
@@ -170,7 +170,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
       await http.patch(`${base}/orders/${order.id}/status`).set(auth(buyer.accessToken)).send({ status: 'paid' }).expect(400);
     });
     await t.test('Failed multi-item checkout rolls back inventory, order and cart', async () => {
-      // Race loser still has one item. Make its quantity exceed the remaining stock.
+      // La compra que perdió la carrera todavía tiene un producto; ahora pedimos más que el stock disponible.
       const rows = await db.query('SELECT "userId" FROM cart_items WHERE "productId" = $1', [product.id]);
       const loser = rows[0].userId === buyer.user.id ? buyer : other;
       const extra = (await http.post(`${base}/products`).set(auth(seller.accessToken)).send({ name: 'Mouse campus', description: 'Mouse de laboratorio en buen estado', categoryId: category.id, price: 12000, stock: 2 }).expect(201)).body;
@@ -221,7 +221,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
         const concurrent = await Promise.all([move(seller, 'preparing'), move(seller, 'preparing')]);
         assert.deepEqual(concurrent.map(r => r.status).sort(), [200, 409]);
         assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'confirmed');
-        // Global status is still confirmed; segment state must nevertheless block cancellation.
+        // El pedido general sigue confirmado, pero si un vendedor ya avanzó, no se puede cancelar.
         await http.patch(`${base}/orders/${tracked.id}/status`).set(auth(buyer.accessToken)).send({ status: 'cancelled' }).expect(409);
         await move(other, 'preparing').expect(200);
         assert.equal((await http.get(`${base}/orders/${tracked.id}`).set(auth(buyer.accessToken))).body.status, 'preparing');
@@ -284,7 +284,7 @@ test('Marketplace HTTP against real isolated PostgreSQL', { timeout: 600000 }, a
         await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send({ ...body, receiverId: other.user.id }).expect(403);
         await http.post(base + '/activity/interactions').set(auth(buyer.accessToken)).send({ ...body, message: '   ' }).expect(400);
         await http.get(base + '/activity/interactions/me?limit=101').set(auth(buyer.accessToken)).expect(400);
-        // Simulate crash after Mongo upsert but before SQL delete, then replay.
+        // Simulamos un corte después de guardar en MongoDB y antes de borrar el pendiente en SQL; luego reintentamos.
         const event = await db.getRepository(ActivityOutbox).save({ eventName: 'product.updated', userId: buyer.user.id, resourceId: product.id, metadata: {} });
         await mongo.collection('activity_logs').insertOne({ eventId: event.id, eventName: event.eventName, userId: event.userId, resourceId: event.resourceId, occurredAt: event.createdAt.toISOString(), metadata: {} });
         await activity.flushOutbox();

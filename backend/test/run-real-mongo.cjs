@@ -1,7 +1,7 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { spawn } = require('node:child_process');
 (async () => {
-  // Real mongod process with WiredTiger. No persistence is mocked.
+  // Esta prueba inicia un MongoDB real con WiredTiger; no usamos una base simulada.
   const mongo = await MongoMemoryServer.create({
     binary: { version: process.env.MONGOMS_VERSION || '7.0.24' },
     instance: {
