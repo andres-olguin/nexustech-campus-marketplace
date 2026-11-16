@@ -3,6 +3,7 @@ import Button from "../ui/Button.jsx";
 import Icon from "../ui/Icon.jsx";
 import ProductImage from "../ui/ProductImage.jsx";
 import PriceDisplay from "../ui/PriceDisplay.jsx";
+import { representativeLiveImage } from "../../data/imageAssets.js";
 
 export default function ProductCard({
   product: p,
@@ -20,6 +21,7 @@ export default function ProductCard({
 }) {
   const isDemo = Boolean(p.isDemo);
   const detailTarget = isDemo ? p : p.id;
+  const hasReferenceImage = !isDemo && (!p.imageUrl || /^https:\/\/images\.unsplash\.com\//.test(p.imageUrl));
 
   const stockClass =
     p.stock > 3
@@ -49,10 +51,12 @@ export default function ProductCard({
           {isDemo
             ? p.isIllustration
               ? "ILUSTRACIÓN · DEMO"
-              : "DEMO · VIÑA DEL MAR"
-            : p.isActive
-              ? "VIÑA DEL MAR"
-              : "ARCHIVADO"}
+              : "FOTO WEB · DEMO"
+            : !p.isActive
+              ? "ARCHIVADO"
+              : hasReferenceImage
+                ? "FOTO WEB REFERENCIAL"
+                : "VIÑA DEL MAR"}
         </span>
         {p.condition && (
           <span

@@ -148,19 +148,82 @@ async function ready(url, child) {
     const buyer = { name: "Comprador de prueba", email: "comprador-" + suffix + "@example.test", password: passwordDemo };
     const s = await callApi("/auth/register", "POST", seller, undefined, 201);
     await callApi("/auth/register", "POST", buyer, undefined, 201);
-    const category = await callApi("/categories", "POST", { name: "Componentes demo " + suffix }, s.accessToken, 201);
+
+    const categoryIds = {};
+    for (const [key, title] of Object.entries({
+      components: "Componentes",
+      peripherals: "Perifericos",
+      computers: "Computadores y pantallas",
+      networks: "Redes y conectividad",
+      accessories: "Accesorios",
+    })) {
+      const item = await callApi("/categories", "POST", { name: title + " demo " + suffix }, s.accessToken, 201);
+      categoryIds[key] = item.id;
+    }
+    // 24 publicaciones simuladas pero REALMENTE persistidas en PostgreSQL.
+    // Una cuenta vendedor de prueba; no confundir con 240 fichas solo ilustrativas.
     const products = [
-      { name: "Memoria RAM demo 8 GB", description: "Publicacion ficticia DDR4", stock: 1, price: 24990,
+      { name: "Memoria RAM demo 8 GB", description: "Memoria ficticia DDR4 de 8 GB para pruebas de filtros y stock.", stock: 1, price: 24990,
         technical: { profile: "memory", text: "8 GB DDR4 DIMM 2666 MT/s", values: { ramGb: 8, ramType: "DDR4", ramFormat: "DIMM", ramSpeed: 2666 } } },
-      { name: "Memoria RAM demo 16 GB", description: "Publicacion ficticia DDR4 para filtro y compra", stock: 2, price: 39990,
+      { name: "Memoria RAM demo 16 GB", description: "Memoria ficticia DDR4 de 16 GB para pruebas de compra.", stock: 2, price: 39990,
         technical: { profile: "memory", text: "2x8 GB DDR4 DIMM 3200 MT/s", values: { ramGb: 16, ramType: "DDR4", ramFormat: "DIMM", ramSpeed: 3200 } } },
-      { name: "Tarjeta de video demo RTX 4060", description: "Publicacion ficticia GPU", stock: 1, price: 199990,
+      { name: "Tarjeta de video demo RTX 4060", description: "Tarjeta grafica ficticia para comprobar publicaciones y precios.", stock: 1, price: 199990,
         technical: { profile: "graphics", text: "RTX 4060 GDDR6 8 GB", values: { gpuModel: "RTX 4060", vramGb: 8, vramType: "GDDR6", vramBusBits: 128 } } },
-      { name: "Teclado mecanico demo", description: "Publicacion ficticia para probar pedidos y mensajes", stock: 2, price: 17990 },
+      { name: "SSD NVMe 1 TB demo", description: "Unidad solida ficticia para pruebas de catalogo y carrito.", stock: 6, price: 52990 },
+      { name: "Procesador Ryzen 5 demo", description: "Procesador ficticio para demostracion academica del marketplace.", stock: 3, price: 109990 },
+      { name: "Placa madre B550 demo", description: "Placa base ficticia para demostracion de publicaciones SQL.", stock: 4, price: 79990 },
+      { categoryKey: "peripherals", name: "Teclado mecanico demo", description: "Teclado ficticio para demostrar pedidos y mensajes del vendedor.", stock: 2, price: 17990 },
+      { categoryKey: "peripherals", name: "Mouse inalambrico demo", description: "Mouse ficticio para probar favoritos y agregar al carrito.", stock: 5, price: 12990 },
+      { categoryKey: "peripherals", name: "Audifonos Bluetooth demo", description: "Audifonos de muestra para probar la busqueda del catalogo.", stock: 3, price: 21990 },
+      { categoryKey: "peripherals", name: "Webcam USB 1080p demo", description: "Camara web ficticia para demostrar las categorias.", stock: 4, price: 25990 },
+      { categoryKey: "peripherals", name: "Microfono USB demo", description: "Microfono de prueba para demostrar publicaciones.", stock: 2, price: 34990 },
+      { categoryKey: "peripherals", name: "Impresora 3D compacta demo", description: "Impresora ficticia usada como ejemplo de producto tecnologico.", stock: 1, price: 239990 },
+      { categoryKey: "computers", name: "Notebook 14 pulgadas demo", description: "Portatil de muestra para una publicacion de comprador y vendedor.", stock: 2, price: 289990 },
+      { categoryKey: "computers", name: "Monitor 24 pulgadas IPS demo", description: "Monitor ficticio para comprobar precios y estados del catálogo.", stock: 4, price: 79990 },
+      { categoryKey: "computers", name: "Monitor ultrawide 34 pulgadas demo", description: "Monitor de muestra para pruebas de navegación.", stock: 1, price: 249990 },
+      { categoryKey: "computers", name: "Tablet 10 pulgadas demo", description: "Tableta de muestra para el marketplace universitario.", stock: 3, price: 119990 },
+      { categoryKey: "networks", name: "Router WiFi 6 demo", description: "Router de muestra para comprobar filtros por categoria.", stock: 3, price: 59990 },
+      { categoryKey: "networks", name: "Switch de red 8 puertos demo", description: "Switch ficticio utilizado en la demostracion SQL.", stock: 2, price: 35990 },
+      { categoryKey: "networks", name: "Kit de red Ethernet demo", description: "Kit ficticio de cables y conectividad del campus.", stock: 6, price: 14990 },
+      { categoryKey: "networks", name: "Adaptador de red USB demo", description: "Adaptador ficticio para ampliar el catalogo de la demo.", stock: 5, price: 12990 },
+      { categoryKey: "accessories", name: "Powerbank 20000 mAh demo", description: "Bateria externa de muestra para el marketplace.", stock: 4, price: 26990 },
+      { categoryKey: "accessories", name: "Cargador USB-C 65W demo", description: "Cargador ficticio para probar el flujo de compra.", stock: 5, price: 19990 },
+      { categoryKey: "accessories", name: "Soporte de notebook demo", description: "Soporte ergonomico ficticio para una publicacion.", stock: 4, price: 15990 },
+      { categoryKey: "accessories", name: "Mochila para notebook demo", description: "Mochila de muestra para pruebas de catalogo.", stock: 3, price: 24990 },
     ];
+    // Más publicaciones: datos propios de catálogo sintético original del equipo,
+    // publicados por API HTTP para que existan REALMENTE en PostgreSQL.
+    const [catalog1,catalog2,catalog3,{photoUrlForKey}] = await Promise.all([
+      import(pathToFileURL(join(root, "src/data/catalogPart1.js")).href),
+      import(pathToFileURL(join(root, "src/data/catalogPart2.js")).href),
+      import(pathToFileURL(join(root, "src/data/catalogPart3.js")).href),
+      import(pathToFileURL(join(root, "src/data/photoCatalog.js")).href),
+    ]);
+    const allCatalog = [...catalog1.part1Products,...catalog2.part2Products,...catalog3.part3Products];
+    const categoriesSource = ["Notebooks","Computadores","Componentes","Almacenamiento",
+      "Monitores","Periféricos","Audio","Smartphones","Tablets","Redes","Impresoras","Accesorios"];
+    const mappedKeys = {
+      "Notebooks":"computers","Computadores":"computers","Componentes":"components",
+      "Almacenamiento":"components","Monitores":"computers","Periféricos":"peripherals",
+      "Audio":"peripherals","Smartphones":"accessories","Tablets":"computers",
+      "Redes":"networks","Impresoras":"peripherals","Accesorios":"accessories",
+    };
+    const selected = categoriesSource.flatMap(category =>
+      allCatalog.filter(item => item.category === category).slice(0,5));
+    const catalogExtras = selected.map(item=>({
+      categoryKey: mappedKeys[item.category],
+      name: (item.name.length > 150 ? item.name.slice(0,150) : item.name) + " · demo",
+      description: item.description.slice(0,1800),
+      price: Math.max(1000,Math.min(2500000,Math.floor(item.price))),
+      stock: Math.max(1,Math.min(100,Number(item.stock)||1)),
+      imageUrl: photoUrlForKey(item.imgKey),
+    }));
+    products.push(...catalogExtras);
     const created = [];
     for (const product of products) {
-      const item = await callApi("/products", "POST", { ...product, categoryId: category.id }, s.accessToken, 201);
+      const { categoryKey = "components", ...payload } = product;
+      const item = await callApi("/products", "POST",
+        { ...payload, categoryId: categoryIds[categoryKey] }, s.accessToken, 201);
       created.push({ name: item.name, id: item.id });
     }
     console.log("\n========== NEXUSTECH EN EJECUCION SIN DOCKER ==========");
@@ -170,6 +233,7 @@ async function ready(url, child) {
     console.log("Vendedor: " + seller.email);
     console.log("Comprador: " + buyer.email);
     console.log("Clave de ambas cuentas: " + passwordDemo);
+    console.log("Publicaciones SQL ficticias totales: " + created.length + " (24 iniciales + " + catalogExtras.length + " añadidas desde el catálogo ilustrativo)");
     console.log("Productos ficticios (UUID):");
     for (const item of created) console.log(" - " + item.name + " | " + item.id);
     console.log("Los pagos y despachos son simulados. Los datos temporales se eliminan al cerrar.");

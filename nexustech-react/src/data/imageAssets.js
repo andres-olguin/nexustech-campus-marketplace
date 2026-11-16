@@ -92,3 +92,37 @@ const images = {
 };
 export function localProductImage(url) { return images[url] || placeholder; }
 export { placeholder };
+
+/** Referencias visuales locales para publicaciones ficticias sin imagen aportada.
+ * No son fotografias verificadas del articulo anunciado; la UI las identifica. */
+export function representativeLiveImage(title = "") {
+  const name = String(title).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/teclado/.test(name)) return image14;
+  if (/memoria ram|\bram\b|\bddr[345]\b/.test(name)) return image9;
+  if (/tarjeta de video|grafica|geforce|\brtx\b|\bgpu\b/.test(name)) return image6;
+  if (/\bssd\b|\bnvme\b|disco solido/.test(name)) return image8;
+  if (/procesador|ryzen|intel core/.test(name)) return image7;
+  if (/placa madre|motherboard/.test(name)) return image12;
+  if (/fuente de poder/.test(name)) return image6;
+  if (/gabinete/.test(name)) return image5;
+  if (/mouse/.test(name)) return image16;
+  if (/audifono/.test(name)) return image13;
+  if (/webcam|camara web/.test(name)) return image15;
+  if (/microfono/.test(name)) return image17;
+  if (/parlantes|altavoces/.test(name)) return image13;
+  if (/impresora 3d/.test(name)) return image18;
+  if (/impresora/.test(name)) return image18;
+  if (/notebook|laptop|portatil/.test(name)) return image1;
+  if (/monitor ultrawide/.test(name)) return image15;
+  if (/monitor/.test(name)) return image15;
+  if (/tablet/.test(name)) return image20;
+  if (/router/.test(name)) return image11;
+  if (/switch de red/.test(name)) return image11;
+  if (/cable de red|kit de red|adaptador de red/.test(name)) return image10;
+  if (/powerbank/.test(name)) return image20;
+  if (/cargador/.test(name)) return image12;
+  if (/soporte/.test(name)) return image3;
+  if (/mochila/.test(name)) return image3;
+  if (/hub usb/.test(name)) return image12;
+  return image18;
+}

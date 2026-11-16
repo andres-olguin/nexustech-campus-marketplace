@@ -1,38 +1,5 @@
-/* Catálogo: jerarquía, controles de precios y tarjetas responsive. */
-.nt-hero {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  min-height: 315px;
-  margin-bottom: 26px;
-  padding: 38px clamp(22px, 4vw, 56px);
-  border: 1px solid #2c4057;
-  border-radius: 22px;
-  background: radial-gradient(ellipse at 0% 100%, #173c50, transparent 63%), #0f1a2a;
-}
-.nt-hero-visual {
-  position: absolute;
-  z-index: -1;
-  inset: 0 0 0 32%;
-  background-image: linear-gradient(90deg, #0f1a2a8c, #0a111d15 70%), var(--nt-hero-image);
-  background-size: cover;
-  background-position: center 49%;
-  mask-image: linear-gradient(to right, transparent, #000 32%);
-}
-.nt-hero-copy { max-width: 640px; }
-.nt-hero-kicker { display: inline-flex; align-items: center; gap: 9px; color: #b4eaff; font-size: 11px; font-weight: 750; letter-spacing: 1.5px; }
-.nt-hero-kicker > span { width: 7px; height: 7px; border-radius: 50%; background: var(--nt-cyan); box-shadow: 0 0 16px #00d2ff80; }
-.nt-hero h1 { margin: 16px 0 12px; font-size: clamp(35px, 4.1vw, 60px); font-weight: 760; letter-spacing: -.055em; line-height: 1.06; }
-.nt-hero h1 span { display: block; color: #65e2fc; }
-.nt-hero-copy > p { color: #c1cede; margin-bottom: 24px; font-size: clamp(14px, 1.2vw, 16px); }
-.nt-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.nt-hero-actions .nt-button { padding-inline: 17px; }
-.nt-hero-actions .nt-button--secondary { background: #132437; }
-.nt-hero-count { position: absolute; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #0b1525eb; border: 1px solid #7cc6df55; color: #d5e7f5; border-radius: 9px; font-size: 12px; }
-.nt-hero-count .nt-icon { color: #65e2fc; margin-right: 3px; }
-
+/* El hero solo se define estructuralmente en styles.css. Las reglas antiguas
+   de fondo absoluto en este archivo superponian la foto y el texto. */
 .nt-catalog-section { min-width: 0; scroll-margin-top: calc(var(--nt-header-offset) + 12px); }
 .nt-results-heading { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
 .nt-results-heading h2 { margin: 0; font-size: clamp(21px, 2.5vw, 30px); letter-spacing: -.035em; }
