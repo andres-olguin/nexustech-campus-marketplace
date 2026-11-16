@@ -1,7 +1,7 @@
 name: Hito 3 - Compose real
 on:
   push:
-    branches: [main, 'entrega/**', 'fix/frontend-detalle-carrito-hito3-20261116']
+    branches: [main, 'entrega/**']
   pull_request:
     branches: [main, 'entrega/**']
   workflow_dispatch:
@@ -50,7 +50,7 @@ jobs:
       - name: Ejecutar Playwright contra React, NestJS, PostgreSQL y MongoDB
         env:
           TEST_UI_URL: http://127.0.0.1:5173
-          TEST_API_URL: http://127.0.0.1:3001/api/v1
+          TEST_API_URL: http://localhost:3001/api/v1
         run: |
           cd nexustech-react
           npx playwright test
