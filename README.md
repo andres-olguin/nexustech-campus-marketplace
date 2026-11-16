@@ -55,13 +55,15 @@ npm run test:e2e
 
 Las pruebas del backend y del navegador usan instancias temporales reales de PostgreSQL y MongoDB. El [flujo de GitHub Actions](.github/workflows/hito3-compose.yml) agrega una prueba con el Compose de la entrega: salud de servicios, privacidad de mensajes, concurrencia, stock y persistencia tras reinicios.
 
-[Resultados y límites de la validación](docs/hito3/VALIDACION_ENTREGA.md) · [Cómo abrir el PR](docs/hito3/PUBLICAR_PR.md).
+[Resultados y límites de la validación](docs/hito3/VALIDACION_ENTREGA.md) · [Acta de pruebas y entrega del 16/11](docs/hito3/ACTA_PRUEBAS_ENTREGA_2026-11-16.md) · [Cómo abrir el PR](docs/hito3/PUBLICAR_PR.md).
 
 Los pagos y despachos son simulados. Las opiniones de las fichas de muestra son ilustrativas. No se pide un servicio de cobro real ni es una plataforma institucional oficial.
 
 ## Uso de inteligencia artificial
 
 Se usó Codex para ayudar a integrar las ramas y a conectar los filtros y el precio con el servidor. Pedidos representativos: adaptar los filtros al tipo de equipo, mostrar flechas solo si hay otro resultado e integrar el código sin perder las dos bases de datos. Los cambios quedaron separados en Git, se revisaron los conflictos por archivo y se comprobaron mediante pruebas de catálogo, API y navegador. Una decisión resultante fue separar las fichas ilustrativas de los productos que se pueden comprar. Cada integrante puede identificar y explicar su aporte y revisar el PR antes de fusionarlo.
+
+**Reporte detallado:** [herramientas, prompts representativos, resultados, validación humana y aprendizajes](docs/hito3/USO_IA_TRAZABILIDAD_2026-11-16.md).
 
 ## Colaboración y responsabilidades comprobables
 
