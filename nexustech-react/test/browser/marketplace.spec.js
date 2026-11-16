@@ -189,6 +189,13 @@ test("Real browser registration → publication/edit → favorites/cart → mult
       exact: true,
     }),
   ).toBeVisible();
+  // Agregar desde el detalle incrementa las unidades que ya estaban en el carrito.
+  await buyer.getByRole("button", { name: "Ver detalle de " + firstName, exact: true }).click();
+  await buyer.getByRole("dialog").getByRole("button", { name: "Añadir al carrito", exact: true }).click();
+  await expect(buyer.getByRole("button", { name: "Abrir carrito, 2 unidades", exact: true })).toBeVisible();
+  await buyer.getByRole("button", { name: "Reducir cantidad de " + firstName, exact: true }).click();
+  await expect(buyer.getByRole("button", { name: "Abrir carrito, 1 unidades", exact: true })).toBeVisible();
+  await buyer.getByRole("button", { name: "Cerrar ventana", exact: true }).click();
   await buyer.getByRole("button", { name: /^Abrir carrito/ }).click();
   await buyer
     .getByRole("button", {
