@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer className="nt-footer">
       <div className="nt-footer-main">
-        {/* Columna 1: NexusTech Brand */}
+        {/* Primera columna: nombre y logo de NexusTech */}
         <div className="nt-footer-col nt-footer-brand">
           <div className="nt-footer-brand-title">
             <span className="nt-brand-mark nt-brand-mark-small">

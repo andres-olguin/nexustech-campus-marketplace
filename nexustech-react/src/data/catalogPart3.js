@@ -1,5 +1,5 @@
 export const part3Products = [
-  // ======================== SMARTPHONES (16) ========================
+  // ======================== CELULARES (16) ========================
   {
     id: "demo-167",
     name: "Smartphone 5G Pantalla AMOLED 120Hz — 256GB / 8GB RAM",
@@ -213,7 +213,7 @@ export const part3Products = [
     reviews: []
   },
 
-  // ======================== TABLETS (16) ========================
+  // ======================== TABLETAS (16) ========================
   {
     id: "demo-041",
     name: 'Tablet 11" Estudio + Lápiz Óptico para Apuntes PDF',

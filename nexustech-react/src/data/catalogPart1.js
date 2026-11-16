@@ -1,5 +1,5 @@
 export const part1Products = [
-  // ======================== NOTEBOOKS (24) ========================
+  // ======================== PORTÁTILES (24) ========================
   {
     id: "demo-001",
     name: 'Notebook Ultrabook 14" — 16GB RAM / 512GB NVMe',

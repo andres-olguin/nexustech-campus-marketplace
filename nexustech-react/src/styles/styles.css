@@ -206,7 +206,7 @@ body {
 }
 
 /* ==========================================================================
-   Header & Navegación Principal
+   Cabecera y navegación principal
    ========================================================================== */
 .nt-header {
   position: sticky;
@@ -506,7 +506,7 @@ body {
 }
 
 /* ==========================================================================
-   Badges y Chips de Estado
+   Etiquetas y estados
    ========================================================================== */
 .nt-badge {
   display: inline-flex;
@@ -659,7 +659,7 @@ select.nt-input {
 }
 
 /* ==========================================================================
-   Hero del Catálogo (Academic Hero)
+   Portada del catálogo
    ========================================================================== */
 .nt-hero {
   display: grid;
@@ -860,7 +860,7 @@ select.nt-input {
 }
 
 /* ==========================================================================
-   Catálogo, Filtros y Grid
+   Catálogo, filtros y cuadrícula
    ========================================================================== */
 .nt-catalog-layout {
   display: grid;
@@ -929,7 +929,7 @@ select.nt-input {
 }
 
 /* ==========================================================================
-   Product Card
+   Tarjetas de producto
    ========================================================================== */
 .nt-product-card {
   min-width: 0;
@@ -1305,7 +1305,7 @@ html:has(dialog.nt-dialog[open]) {
 }
 
 /* ==========================================================================
-   Carrito y Checkout
+   Carrito y confirmación del pedido
    ========================================================================== */
 .nt-cart-panel {
   display: flex;
@@ -1435,7 +1435,7 @@ html:has(dialog.nt-dialog[open]) {
 }
 
 /* ==========================================================================
-   Página de Actividad & Telemetría MongoDB
+   Actividad y datos de MongoDB
    ========================================================================== */
 .nt-interactions-page {
   display: flex;
@@ -1528,7 +1528,7 @@ html:has(dialog.nt-dialog[open]) {
 }
 
 /* ==========================================================================
-   Página de Pedidos, Ventas y Tracking
+   Pedidos, ventas y seguimiento
    ========================================================================== */
 .nt-page-heading {
   padding: 24px 0 28px;
@@ -1665,7 +1665,7 @@ html:has(dialog.nt-dialog[open]) {
 }
 
 /* ==========================================================================
-   Footer Académico con Logos UNAB y MasterTech
+   Pie de página con logos UNAB y MasterTech
    ========================================================================== */
 .nt-footer {
   margin-top: 60px;
@@ -1931,7 +1931,7 @@ html:has(dialog.nt-dialog[open]) {
 }
 
 /* ==========================================================================
-   Media Queries & Responsive
+   Ajustes para distintos tamaños de pantalla
    ========================================================================== */
 @media (max-width: 1199.98px) {
   .nt-nav-shell {
@@ -2189,7 +2189,7 @@ html:has(dialog.nt-dialog[open]) {
   font-size: 12px;
 }
 
-/* Reviews Section */
+/* Sección de reseñas */
 .nt-reviews {
   border-top: 1px solid var(--nt-line);
   padding-top: 24px;
@@ -2488,7 +2488,7 @@ html:has(dialog.nt-dialog[open]) {
   }
 }
 
-/* Engineering QA: keep checkout/account/menu controls reachable on narrow screens. */
+/* En pantallas chicas dejamos accesibles los botones del carrito, la cuenta y el menú. */
 @media (max-width: 640px) {
   .nt-nav-shell { flex-wrap: wrap; }
   .nt-nav-actions { width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; }
