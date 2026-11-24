@@ -14,13 +14,26 @@ async function api(path, method = 'GET', body, token, expected = 200) {
   return reply.json();
 }
 
-// Los correos son estables, pero las claves se generan una sola vez por entorno.
-// Nunca se publican las contraseñas dentro del código ni de GitHub Actions.
+// Los correos son estables. Opcionalmente se configuran claves fijas desde
+// DEMO_SELLER_PASSWORD y DEMO_BUYER_PASSWORD (por ejemplo, .env.demo.local).
+// Jamás se versionan contraseñas ni se imprimen en los logs.
 const ACCOUNTS = {
   seller: { email: 'vendedor@nexustech.test', name: 'Vendedor de prueba' },
   buyer: { email: 'comprador@nexustech.test', name: 'Comprador de prueba' },
 };
 const previousReport = resolve(__dirname, '..', '.demo-local.previous.json');
+const demoPasswords = {
+  seller: process.env.DEMO_SELLER_PASSWORD || null,
+  buyer: process.env.DEMO_BUYER_PASSWORD || null,
+};
+const providedPasswordCount = Object.values(demoPasswords).filter(Boolean).length;
+if (providedPasswordCount === 1) {
+  throw new Error('Configura las dos claves: DEMO_SELLER_PASSWORD y DEMO_BUYER_PASSWORD.');
+}
+if (providedPasswordCount === 2 && Object.entries(demoPasswords).some(([, p]) => p.length < 12 || p.length > 128)) {
+  throw new Error('Cada clave de demostración debe tener entre 12 y 128 caracteres.');
+}
+
 
 function readReport() {
   try { return JSON.parse(readFileSync(report, 'utf8')); }
@@ -38,7 +51,8 @@ function currentCredentials(data) {
     ['seller', 'buyer'].every(role =>
       data[role]?.email === ACCOUNTS[role].email &&
       typeof data[role].password === 'string' &&
-      data[role].password.length >= 12);
+      data[role].password.length >= 12 &&
+      (!demoPasswords[role] || data[role].password === demoPasswords[role]));
 }
 async function ensureAccount(credentials, name) {
   try {
@@ -72,8 +86,8 @@ async function run() {
       }
     }
     saved = {
-      seller: { email: ACCOUNTS.seller.email, password: randomBytes(18).toString('hex') },
-      buyer: { email: ACCOUNTS.buyer.email, password: randomBytes(18).toString('hex') },
+      seller: { email: ACCOUNTS.seller.email, password: demoPasswords.seller || randomBytes(18).toString('hex') },
+      buyer: { email: ACCOUNTS.buyer.email, password: demoPasswords.buyer || randomBytes(18).toString('hex') },
     };
     // Guardar primero: si se interrumpe el registro, un nuevo intento
     // conserva la misma clave en vez de perder acceso a la cuenta creada.
