@@ -1,5 +1,5 @@
 const { randomBytes } = require('node:crypto');
-const { readFileSync, writeFileSync } = require('node:fs');
+const { readFileSync, writeFileSync, chmodSync } = require('node:fs');
 const { resolve } = require('node:path');
 
 const report = resolve(__dirname, '..', '.demo-local.json');
@@ -14,22 +14,89 @@ async function api(path, method = 'GET', body, token, expected = 200) {
   return reply.json();
 }
 
-async function run() {
-  try {
-    JSON.parse(readFileSync(report, 'utf8'));
-    console.log('Ya existe .demo-local.json con las cuentas de demostración. No se cargaron duplicados.');
-    return;
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
+// Los correos son estables, pero las claves se generan una sola vez por entorno.
+// Nunca se publican las contraseñas dentro del código ni de GitHub Actions.
+const ACCOUNTS = {
+  seller: { email: 'vendedor@nexustech.test', name: 'Vendedor de prueba' },
+  buyer: { email: 'comprador@nexustech.test', name: 'Comprador de prueba' },
+};
+const previousReport = resolve(__dirname, '..', '.demo-local.previous.json');
+
+function readReport() {
+  try { return JSON.parse(readFileSync(report, 'utf8')); }
+  catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
   }
+}
+function saveReport(data) {
+  writeFileSync(report, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
+  chmodSync(report, 0o600);
+}
+function currentCredentials(data) {
+  return data &&
+    ['seller', 'buyer'].every(role =>
+      data[role]?.email === ACCOUNTS[role].email &&
+      typeof data[role].password === 'string' &&
+      data[role].password.length >= 12);
+}
+async function ensureAccount(credentials, name) {
+  try {
+    return await api('/auth/login', 'POST', credentials);
+  } catch (error) {
+    // Solo un usuario que aún no existe devuelve 401; otros errores se propagan.
+    if (!error.message.includes('HTTP 401')) throw error;
+  }
+  try {
+    return await api('/auth/register', 'POST', { ...credentials, name }, undefined, 201);
+  } catch (error) {
+    if (error.message.includes('HTTP 409')) {
+      throw new Error('El correo ' + credentials.email +
+        ' ya existe con otra clave. Revisa el entorno antes de modificar datos.');
+    }
+    throw error;
+  }
+}
+
+async function run() {
   await api('/health/ready');
-  const run = randomBytes(4).toString('hex');
-  const credentials = name => ({ email: name + '-' + run + '@example.test', password: randomBytes(18).toString('hex') });
-  const seller = credentials('vendedor'), buyer = credentials('comprador');
+  let saved = readReport();
+  if (!currentCredentials(saved)) {
+    if (saved) {
+      // Respaldo privado de las credenciales aleatorias de la versión anterior.
+      try {
+        writeFileSync(previousReport, JSON.stringify(saved, null, 2) + '\n',
+          { flag: 'wx', mode: 0o600 });
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+      }
+    }
+    saved = {
+      seller: { email: ACCOUNTS.seller.email, password: randomBytes(18).toString('hex') },
+      buyer: { email: ACCOUNTS.buyer.email, password: randomBytes(18).toString('hex') },
+    };
+    // Guardar primero: si se interrumpe el registro, un nuevo intento
+    // conserva la misma clave en vez de perder acceso a la cuenta creada.
+    saveReport(saved);
+  }
   const [sellerAccount, buyerAccount] = await Promise.all([
-    api('/auth/register', 'POST', { ...seller, name: 'Vendedor de prueba' }, undefined, 201),
-    api('/auth/register', 'POST', { ...buyer, name: 'Comprador de prueba' }, undefined, 201),
+    ensureAccount(saved.seller, ACCOUNTS.seller.name),
+    ensureAccount(saved.buyer, ACCOUNTS.buyer.name),
   ]);
+  if (saved.seller.id === sellerAccount.user.id &&
+      saved.buyer.id === buyerAccount.user.id &&
+      Array.isArray(saved.products) && saved.products.length === 4) {
+    const productsExist = await Promise.all(saved.products.map(async product => {
+      try { await api('/products/' + encodeURIComponent(product.id)); return true; }
+      catch { return false; }
+    }));
+    if (productsExist.every(Boolean)) {
+      console.log('Cuentas de demo listas: vendedor@nexustech.test y comprador@nexustech.test.');
+      console.log('Claves privadas guardadas en .demo-local.json. No las subas a GitHub.');
+      return;
+    }
+  }
+  const run = randomBytes(4).toString('hex');
   const token = sellerAccount.accessToken;
   const category = await api('/categories', 'POST', { name: 'Componentes demo ' + run }, token, 201);
   const items = [
@@ -46,12 +113,14 @@ async function run() {
     const product = await api('/products', 'POST', { ...item, categoryId: category.id }, token, 201);
     products.push({ id: product.id, name: product.name, stock: product.stock });
   }
-  writeFileSync(report, JSON.stringify({
-    seller: { ...seller, id: sellerAccount.user.id },
-    buyer: { ...buyer, id: buyerAccount.user.id },
+  saveReport({
+    seller: { ...saved.seller, id: sellerAccount.user.id },
+    buyer: { ...saved.buyer, id: buyerAccount.user.id },
     products,
-  }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-  console.log('Cuatro publicaciones guardadas en PostgreSQL. Abrí .demo-local.json para ver las dos cuentas ficticias y los ID.');
+  });
+  console.log('Cuatro publicaciones guardadas en PostgreSQL.');
+  console.log('Cuentas disponibles: vendedor@nexustech.test y comprador@nexustech.test.');
+  console.log('Contraseñas privadas en .demo-local.json (no subir el archivo a GitHub).');
 }
 
 run().catch(error => {
