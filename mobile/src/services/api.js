@@ -98,4 +98,13 @@ export const api = {
   orders: (query) => request('/orders', { query }),
   order: (id) => request(`/orders/${id}`),
   cancelOrder: (id) => request(`/orders/${id}/status`, { method: 'PATCH', body: { status: 'cancelled' } }),
+
+  // Modo vendedor: ventas recibidas y avance de su parte del pedido
+  sales: (query) => request('/seller/orders', { query }),
+  advanceSale: (id, status) => request(`/seller/orders/${id}/status`, { method: 'PATCH', body: { status } }),
+
+  // Preguntas entre comprador y vendedor (se guardan en MongoDB)
+  interactions: (targetId, limit = 50) => request(`/activity/interactions/target/${targetId}`, { query: { limit } }),
+  sendInteraction: (targetId, receiverId, message) =>
+    request('/activity/interactions', { method: 'POST', body: { targetId, targetType: 'product', receiverId, message } }),
 };

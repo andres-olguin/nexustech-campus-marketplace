@@ -3,6 +3,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Button, StateView, formatCLP } from '../components/UI';
+import ProductQuestions from '../components/ProductQuestions';
 import { COLORS } from '../config';
 
 export default function ProductDetailScreen({ route, navigation }) {
@@ -55,7 +56,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: COLORS.bg }} contentContainerStyle={{ paddingBottom: 30 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: COLORS.bg }} contentContainerStyle={{ paddingBottom: 30 }} keyboardShouldPersistTaps="handled">
       {product.imageUrl ? (
         <Image source={{ uri: product.imageUrl }} style={st.image} resizeMode="cover" />
       ) : (
@@ -91,6 +92,8 @@ export default function ProductDetailScreen({ route, navigation }) {
             <Button title="Agregar al carrito" onPress={addToCart} loading={adding} style={{ flex: 1 }} />
           </View>
         ) : null}
+
+        <ProductQuestions product={product} />
       </View>
     </ScrollView>
   );

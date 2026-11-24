@@ -11,7 +11,14 @@ App móvil de NexusTech Campus Marketplace (React Native con Expo). Es un segund
 - Agregar productos al carrito, cambiar cantidades y comprar (la compra es simulada).
 - Ver los pedidos propios con su estado y cancelar los que todavía se pueden cancelar.
 
+Funcionalidades adicionales:
+
+- **Modo vendedor:** la pestaña *Ventas* muestra las compras de los productos propios y permite avanzar su estado (preparación, despacho, entrega).
+- **Preguntas al vendedor:** en el detalle de un producto, el comprador escribe y el vendedor responde. Los mensajes se guardan en MongoDB.
+
 En todas las pantallas hay estado de carga, error con botón de reintento y mensaje cuando no hay resultados. Los formularios validan antes de enviar y muestran el mensaje que devuelve el backend.
+
+La guía para probar y mostrar todo está en [GUIA_DE_PRUEBA.md](GUIA_DE_PRUEBA.md).
 
 ## Cómo ejecutarla
 
@@ -61,6 +68,8 @@ Todos bajo `/api/v1`. El servicio está en `src/services/api.js`.
 | Carrito | `GET /cart`, `PUT /cart`, `DELETE /cart/:productId` |
 | Compra | `POST /orders` |
 | Pedidos | `GET /orders`, `GET /orders/:id`, `PATCH /orders/:id/status` |
+| Ventas (vendedor) | `GET /seller/orders`, `PATCH /seller/orders/:id/status` |
+| Preguntas al vendedor | `GET /activity/interactions/target/:id`, `POST /activity/interactions` |
 
 ## Estructura
 

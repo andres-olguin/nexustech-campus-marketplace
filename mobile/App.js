@@ -16,6 +16,7 @@ import CartScreen from './src/screens/CartScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import SalesScreen from './src/screens/SalesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -36,6 +37,7 @@ function Tabs() {
       <Tab.Screen name="Favoritos" component={FavoritesScreen} options={{ tabBarIcon: icon('❤️') }} />
       <Tab.Screen name="Carrito" component={CartScreen} options={{ tabBarIcon: icon('🛒') }} />
       <Tab.Screen name="Pedidos" component={OrdersScreen} options={{ tabBarIcon: icon('📦') }} />
+      <Tab.Screen name="Ventas" component={SalesScreen} options={{ tabBarIcon: icon('💰') }} />
       <Tab.Screen name="Perfil" component={ProfileScreen} options={{ tabBarIcon: icon('👤') }} />
     </Tab.Navigator>
   );
