@@ -5,3 +5,4 @@ node_modules/
 dist/
 coverage/
 .demo-local.json
+.demo-local.previous.json
