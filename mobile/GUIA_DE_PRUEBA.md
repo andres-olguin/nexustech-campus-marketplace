@@ -4,9 +4,11 @@
 
 1. Abrir un Codespace sobre la rama `feat/hito4-mobile` y esperar a que termine de levantar (la terminal avisa cuando la API está lista).
 2. En la pestaña **Puertos**, poner el puerto **3001** en visibilidad **Public** y copiar su URL.
-3. En la terminal del Codespace: `cat .demo-local.json`. Ahí están el **vendedor** y el **comprador** de prueba, con su correo y contraseña. Pasarlos al celular por WhatsApp.
+3. El script de preparación crea o reutiliza exactamente **dos cuentas de demostración con correos estables**: `comprador@nexustech.test` y `vendedor@nexustech.test`. Sus contraseñas aleatorias se conservan en `.demo-local.json`, dentro del Codespace, y no se suben a GitHub. Para consultar **solo los correos**, ejecutar `node -e "const d=require('./.demo-local.json'); console.log(d.buyer.email, d.seller.email)"`. Consultar las claves localmente con `cat .demo-local.json`; no compartirlas en capturas, commits o chats públicos. Si existía un archivo anterior, sus datos se respaldan en `.demo-local.previous.json` (ignorado por Git).
 4. Instalar el APK en el celular (artefacto `nexustech-apk` en Actions).
 5. En la app, en **Servidor**, pegar la URL y tocar **Probar conexión**. Debe decir «Conexión correcta con la API».
+
+**Nota:** las cuentas son de demostración y utilizan la misma lógica de usuarios que el resto de NexusTech. Esto no impide registrar otros usuarios en el backend. Para iniciar la demo con estas credenciales es necesario actualizar el Codespace a la rama que contiene el cambio y ejecutar `node scripts/hito3-demo.cjs` con la API del puerto 3001 disponible. El script no elimina usuarios existentes.
 
 ## Recorrido de la demostración
 
