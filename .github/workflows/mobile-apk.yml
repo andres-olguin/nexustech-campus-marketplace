@@ -1,0 +1,45 @@
+name: Mobile APK
+
+# Compila la app móvil (Expo / React Native) y deja el APK como artefacto descargable.
+# No requiere cuenta de Expo ni claves: se firma con la clave de depuración, suficiente para instalarlo en un celular de prueba.
+on:
+  push:
+    branches: [feat/hito4-mobile]
+    paths: ['mobile/**', '.github/workflows/mobile-apk.yml']
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar dependencias
+        working-directory: mobile
+        run: npm ci
+
+      - name: Generar proyecto Android nativo
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilar APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexustech-apk
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

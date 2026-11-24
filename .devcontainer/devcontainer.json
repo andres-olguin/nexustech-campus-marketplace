@@ -1,0 +1,12 @@
+{
+  "name": "NexusTech API (backend + PostgreSQL + MongoDB)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [3001],
+  "portsAttributes": {
+    "3001": { "label": "API NexusTech", "onAutoForward": "notify" }
+  },
+  "postStartCommand": "node scripts/hito3-env.cjs && docker compose -p nexustech up -d --build --wait --wait-timeout 300 api && node scripts/hito3-demo.cjs"
+}
