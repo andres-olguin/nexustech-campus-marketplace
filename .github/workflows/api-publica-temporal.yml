@@ -1,0 +1,111 @@
+name: API pública temporal (para probar la app móvil)
+
+# Levanta la API real (NestJS + PostgreSQL + MongoDB con Docker Compose) en un
+# runner de GitHub, prueba los flujos de la app contra ella y abre una URL
+# pública temporal (Cloudflare quick tunnel) para usarla desde el celular.
+# La URL aparece en el resumen del job y en las anotaciones. Se apaga sola.
+# Los datos son ficticios y se pierden al terminar.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutos:
+        description: 'Minutos que la API queda disponible (máx. 300)'
+        default: '120'
+  push:
+    branches: ['feat/hito4-api-tunel']
+    paths: ['.github/workflows/api-publica-temporal.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-publica-temporal
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      # Opcionales: si existen como secretos del repositorio, las cuentas demo
+      # usan estas claves (solo las respeta scripts/hito3-demo.cjs del PR #19).
+      DEMO_SELLER_PASSWORD: ${{ secrets.DEMO_SELLER_PASSWORD }}
+      DEMO_BUYER_PASSWORD: ${{ secrets.DEMO_BUYER_PASSWORD }}
+    steps:
+      - name: Obtener exactamente el commit del evento
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          git fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: Levantar PostgreSQL, MongoDB y API
+        run: |
+          node scripts/hito3-env.cjs
+          docker compose -p nexustech up -d --build --wait --wait-timeout 300 api
+
+      - name: Cargar cuentas y publicaciones de demostración
+        run: node scripts/hito3-demo.cjs
+
+      - name: Probar los flujos de la app contra la API real
+        id: smoke
+        continue-on-error: true
+        working-directory: mobile
+        run: |
+          npm install --no-save --no-package-lock esbuild@0.25.5
+          node scripts/flows-smoke.mjs http://127.0.0.1:3001 ../.demo-local.json | tee ../smoke.txt
+
+      - name: Abrir URL pública temporal
+        id: tunnel
+        run: |
+          curl -fsSL -o cloudflared https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-amd64
+          chmod +x cloudflared
+          nohup ./cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3001 > cloudflared.log 2>&1 &
+          for i in $(seq 1 45); do
+            URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' cloudflared.log | head -1 || true)
+            [ -n "$URL" ] && break
+            sleep 2
+          done
+          [ -n "${URL:-}" ] || { echo '::error::No se obtuvo la URL del túnel'; tail -30 cloudflared.log; exit 1; }
+          # Comprobar desde el exterior del runner que la URL responde
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/v1/health/ready" > ready.json; then OK=1; break; fi
+            sleep 3
+          done
+          [ -n "${OK:-}" ] || { echo "::error::La URL $URL no respondió /health/ready"; exit 1; }
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "::notice title=URL de la API (pegar en la app, sección Servidor)::$URL"
+          {
+            echo "## API disponible"
+            echo
+            echo "URL para la app (campo *Servidor*): \`$URL\`"
+            echo
+            echo "Swagger: $URL/docs"
+            echo
+            echo "Resultado de la prueba automática de flujos:"
+            echo '```'
+            tail -n 30 smoke.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Mantener la API disponible
+        env:
+          MINUTOS: ${{ github.event.inputs.minutos || '120' }}
+        run: |
+          M=$(( MINUTOS > 300 ? 300 : MINUTOS ))
+          echo "Disponible durante $M minutos."
+          END=$(( $(date +%s) + M * 60 ))
+          while [ "$(date +%s)" -lt "$END" ]; do
+            curl -fsS --max-time 10 http://127.0.0.1:3001/api/v1/health/ready >/dev/null || echo "::warning::La API no respondió"
+            pgrep cloudflared >/dev/null || { echo '::error::El túnel se cerró'; exit 1; }
+            sleep 60
+          done
+
+      - name: Informar si la prueba de flujos falló
+        if: steps.smoke.outcome == 'failure'
+        run: |
+          echo '::error::La prueba de flujos tuvo pasos fallidos. Ver smoke.txt en el log del paso correspondiente.'
+          exit 1
