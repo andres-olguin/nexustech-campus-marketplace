@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: api-publica-temporal
@@ -58,8 +59,22 @@ jobs:
           npm install --no-save --no-package-lock esbuild@0.25.5
           node scripts/flows-smoke.mjs http://127.0.0.1:3001 ../.demo-local.json | tee ../smoke.txt
 
+      - name: Publicar resultado de la prueba como estado del commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          post() { gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state="$1" -f context="$2" -f description="${3:0:140}" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null; }
+          if [ ! -s smoke.txt ]; then post failure "api-flujos / resumen" "La prueba de flujos no produjo resultados"; exit 0; fi
+          RES=$(grep '^Resumen' smoke.txt || echo 'sin resumen')
+          if [ "${{ steps.smoke.outcome }}" = success ]; then post success "api-flujos / resumen" "$RES"; else post failure "api-flujos / resumen" "$RES"; fi
+          n=0
+          grep '^FALLA' smoke.txt | head -8 | while IFS= read -r line; do n=$((n+1)); post failure "api-flujos / falla $n" "$line"; done || true
+
       - name: Abrir URL pública temporal
         id: tunnel
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           curl -fsSL -o cloudflared https://github.com/cloudflare/cloudflared/releases/download/2025.11.1/cloudflared-linux-amd64
           chmod +x cloudflared
@@ -78,6 +93,7 @@ jobs:
           [ -n "${OK:-}" ] || { echo "::error::La URL $URL no respondió /health/ready"; exit 1; }
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "::notice title=URL de la API (pegar en la app, sección Servidor)::$URL"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state=success -f context="api-url" -f description="$URL" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
           {
             echo "## API disponible"
             echo
