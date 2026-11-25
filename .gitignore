@@ -5,3 +5,6 @@ node_modules/
 dist/
 coverage/
 .demo-local.json
+
+mobile/.smoke-api.bundle.mjs
+.demo-local.previous.json
