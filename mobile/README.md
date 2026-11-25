@@ -40,7 +40,9 @@ La app necesita la dirección base de la API, sin `/api/v1`. Hay tres formas de 
 2. En la pestaña **Perfil**, sección **Servidor**.
 3. Al compilar, con la variable `EXPO_PUBLIC_API_URL`. Si no se define, usa `http://10.0.2.2:3001`.
 
-Para levantar la API con sus bases de datos, desde la raíz del repositorio:
+Para tener una API accesible desde el celular sin instalar nada, el workflow **API pública temporal** (`.github/workflows/api-publica-temporal.yml`) levanta la API real con Docker Compose en GitHub Actions, prueba los flujos de la app y entrega una URL pública temporal. El paso a paso está en [GUIA_DE_PRUEBA.md](GUIA_DE_PRUEBA.md).
+
+En un computador con Docker, desde la raíz del repositorio:
 
 ```bash
 node scripts/hito3-env.cjs
@@ -48,7 +50,7 @@ docker compose -p nexustech up -d --build --wait api
 node scripts/hito3-demo.cjs
 ```
 
-Si no hay Docker, el repositorio incluye `.devcontainer`: se abre en un **GitHub Codespace** y la API queda corriendo sola en el puerto 3001. Hay que ponerlo en visibilidad **Public** en la pestaña *Puertos* para que el celular pueda llegar, y usar esa URL en la app. Las cuentas de prueba quedan en `.demo-local.json`.
+El repositorio también incluye `.devcontainer` para Codespaces, pero esa vía no está verificada (ver la guía).
 
 ## APK
 
@@ -85,6 +87,6 @@ mobile/
 
 ## Uso de IA
 
-Esta app se generó con ayuda de Claude (Anthropic), a partir del enunciado del Hito 4 y de los endpoints y respuestas reales del backend del Hito 3. Claude escribió el código de `mobile/` y la configuración para compilar el APK y levantar la API en Codespaces.
+Esta app se generó con ayuda de Claude (Anthropic), a partir del enunciado del Hito 4 y de los endpoints y respuestas reales del backend del Hito 3. Claude escribió el código de `mobile/` y la configuración para compilar el APK y el workflow que levanta la API para probarla.
 
 El equipo debe completar aquí qué revisó, qué probó en el celular y qué cambió o corrigió.
