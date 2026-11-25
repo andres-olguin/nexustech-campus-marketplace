@@ -51,6 +51,18 @@ jobs:
       - name: Cargar cuentas y publicaciones de demostración
         run: node scripts/hito3-demo.cjs
 
+      - name: La carga de demostración es repetible (sin duplicar ni cambiar claves)
+        run: |
+          count() { curl -fsS "http://127.0.0.1:3001/api/v1/products?limit=100" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).items.length))'; }
+          A=$(sha256sum .demo-local.json | cut -d' ' -f1); N1=$(count)
+          node scripts/hito3-demo.cjs
+          B=$(sha256sum .demo-local.json | cut -d' ' -f1); N2=$(count)
+          echo "productos antes=$N1 después=$N2"
+          [ "$A" = "$B" ] || { echo '::error::Cambió .demo-local.json en la segunda ejecución'; exit 1; }
+          [ "$N1" = "$N2" ] || { echo '::error::La segunda ejecución duplicó productos'; exit 1; }
+          [ "$(stat -c %a .demo-local.json)" = 600 ] || { echo '::error::Permisos de .demo-local.json distintos de 600'; exit 1; }
+          git check-ignore -q .demo-local.json || { echo '::error::.demo-local.json no está ignorado por git'; exit 1; }
+
       - name: Probar los flujos de la app contra la API real
         id: smoke
         continue-on-error: true
