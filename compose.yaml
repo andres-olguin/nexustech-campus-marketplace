@@ -32,7 +32,8 @@ services:
     build: ./backend
     environment:
       PORT: 3000
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://10.0.2.2:5173
+      # Los tres últimos orígenes son los que usa la APK hecha con Capacitor.
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://10.0.2.2:5173,http://localhost,https://localhost,capacitor://localhost
       JWT_SECRET: ${JWT_SECRET:?Genera .env con node scripts/hito3-env.cjs}
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
