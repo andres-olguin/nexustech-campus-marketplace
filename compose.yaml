@@ -32,7 +32,7 @@ services:
     build: ./backend
     environment:
       PORT: 3000
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://10.0.2.2:5173
       JWT_SECRET: ${JWT_SECRET:?Genera .env con node scripts/hito3-env.cjs}
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
@@ -47,7 +47,7 @@ services:
       retries: 15
       start_period: 30s
     ports:
-      - "127.0.0.1:3001:3000"
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
     environment:
       VITE_API_BASE_URL: http://localhost:3001/api/v1
     ports:
-      - "127.0.0.1:5173:5173"
+      - "5173:5173"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
