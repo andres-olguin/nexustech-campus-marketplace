@@ -5,3 +5,37 @@ node_modules/
 dist/
 coverage/
 .demo-local.json
+
+# Archivos privados
+.env
+.env.*
+!.env.example
+
+# Backups de bases de datos
+nexustech-mongo-backup*.tar.gz
+nexustech-postgres-backup*.tar.gz
+
+# Dependencias y compilaciones
+node_modules/
+dist/
+build/
+android/.gradle/
+android/local.properties
+android/app/build/
+
+# Android y Gradle
+**/.gradle/
+**/local.properties
+**/app/build/
+
+# Archivos locales de Android Studio
+**/.idea/
+
+# Archivos auxiliares locales
+Claude outputs/
+
+# Archivos locales de Android Studio
+**/.idea/
+
+# Archivos auxiliares locales
+Claude outputs/

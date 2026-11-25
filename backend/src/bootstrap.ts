@@ -6,7 +6,10 @@ import { addResponseSchemas } from './common/openapi';
 
 export function configureApp(app: INestApplication) {
   app.use(helmet());
-  app.enableCors({ origin: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim()), methods: ['GET','POST','PUT','PATCH','DELETE'], allowedHeaders: ['Content-Type','Authorization'] });
+  // La APK (Capacitor) carga la web desde http://localhost, https://localhost o capacitor://localhost,
+  // así que esos orígenes también tienen que estar permitidos además del de Vite.
+  const defaultOrigins = 'http://localhost:5173,http://localhost,https://localhost,capacitor://localhost';
+  app.enableCors({ origin: (process.env.CORS_ORIGINS || defaultOrigins).split(',').map(s => s.trim()).filter(Boolean), methods: ['GET','POST','PUT','PATCH','DELETE'], allowedHeaders: ['Content-Type','Authorization'] });
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }));
   app.useGlobalFilters(new ErrorsFilter());
