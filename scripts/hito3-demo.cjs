@@ -54,7 +54,10 @@ function currentCredentials(data) {
       data[role].password.length >= 12 &&
       (!demoPasswords[role] || data[role].password === demoPasswords[role]));
 }
-async function ensureAccount(credentials, name) {
+async function ensureAccount(saved, name) {
+  // Solo correo y clave: el archivo guardado también trae el id y la API
+  // rechaza campos que no conoce (HTTP 400).
+  const credentials = { email: saved.email, password: saved.password };
   try {
     return await api('/auth/login', 'POST', credentials);
   } catch (error) {
